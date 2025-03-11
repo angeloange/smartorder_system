@@ -49,6 +49,45 @@ body {
     overflow-y: auto;
 }
 
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.category {
+    background: var(--background-color);
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.category.full-width {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+}
+
+.category h3 {
+    color: var(--primary-color);
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+}
+
+.items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    font-size: 0.95em;
+}
+
 .bottom-info {
     display: flex;
     gap: 20px;
@@ -78,29 +117,6 @@ body {
 .info-text {
     text-align: center;
     font-size: 0.9em;
-}
-
-/* 菜單樣式 */
-.menu-items {
-    margin-top: 20px;
-}
-
-.category {
-    margin-bottom: 30px;
-}
-
-.category h3 {
-    color: var(--primary-color);
-    margin-bottom: 15px;
-}
-
-.item {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px;
-    margin-bottom: 8px;
-    background: var(--background-color);
-    border-radius: 8px;
 }
 
 .rank-list {
