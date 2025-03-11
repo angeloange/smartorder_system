@@ -4,244 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智慧點餐系統</title>
-    <style>
-        .hidden {
-            display: none;
-        }
-        #recordingStatus {
-            color: red;
-            margin-top: 10px;
-        }
-        #microphoneSelect {
-            margin: 10px 0;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        .status-message {
-            margin: 10px 0;
-            padding: 8px;
-            border-radius: 4px;
-            background-color: #f8f9fa;
-        }
-        .error-message {
-            color: red;
-            background-color: #fff3f3;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .order-item {
-            margin: 10px 0;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .button-group {
-            margin-top: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            margin-right: 10px;
-        }
-        .success-message {
-            text-align: center;
-            padding: 20px;
-            font-size: 1.2em;
-            color: #28a745;
-            background-color: #d4edda;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
         <h1>智慧點餐系統</h1>
+        
+        <div class="input-section">
+            <input type="text" id="orderInput" class="order-input" 
+                   placeholder="例：我要一杯大杯冰綠茶，全糖微冰" />
+        </div>
+        
         <button id="startOrder">開始點餐</button>
         
         <div id="orderPrompt" class="hidden">
-            請問今天想喝什麼？<br>
-            (請說明：數量/品項/甜度/冰塊)
+            <p>正在處理您的訂單...</p>
         </div>
 
         <div id="orderResult" class="hidden">
-            <div id="orderDetails"></div>
+            <div id="orderDetails" class="order-container"></div>
             <div class="button-group">
                 <button id="confirmOrder">確認訂單</button>
                 <button id="cancelOrder">取消</button>
             </div>
         </div>
     </div>
-
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
-        let audioContext;
-        let analyser;
-
-        async function getAvailableMicrophones() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            return devices.filter(device => device.kind === 'audioinput');
-        }
-
-        async function startRecording() {
-            try {
-                // 直接發送請求，不進行錄音
-                const response = await fetch('/stop_recording', {
-                    method: 'POST'
-                });
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    displayOrder(result.order_details, result.speech_text);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
-
-        function detectSilence(silenceThreshold = -40, silenceDuration = 1500) {
-            let silenceStart = null;
-            const dataArray = new Float32Array(analyser.frequencyBinCount);
-            
-            const checkVolume = () => {
-                if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-                
-                analyser.getFloatTimeDomainData(dataArray);
-                const volume = Math.sqrt(dataArray.reduce((acc, val) => acc + val * val, 0) / dataArray.length);
-                const volumeDb = 20 * Math.log10(volume);
-                
-                if (volumeDb < silenceThreshold) {
-                    if (!silenceStart) {
-                        silenceStart = Date.now();
-                    } else if (Date.now() - silenceStart > silenceDuration) {
-                        stopRecording();
-                        return;
-                    }
-                } else {
-                    silenceStart = null;
-                }
-                
-                requestAnimationFrame(checkVolume);
-            };
-            
-            checkVolume();
-        }
-
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                document.getElementById('recordingStatus').textContent = '處理中...';
-            }
-        }
-
-        async function sendAudioToServer(audioBlob) {
-            const formData = new FormData();
-            formData.append('audio', audioBlob);
-
-            try {
-                const response = await fetch('/stop_recording', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                document.getElementById('orderResult').textContent = result.message;
-                document.getElementById('orderResult').classList.remove('hidden');
-                
-            } catch (error) {
-                console.error('發送錄音檔案失敗:', error);
-                document.getElementById('orderResult').textContent = '處理訂單時發生錯誤';
-                document.getElementById('orderResult').classList.remove('hidden');
-            }
-        }
-
-        function displayOrder(orderDetails, speechText) {
-            const container = document.getElementById('orderDetails');
-            container.innerHTML = '';
-            
-            // 顯示訂單內容
-            orderDetails.forEach(item => {
-                const orderItem = document.createElement('div');
-                orderItem.classList.add('order-item');
-                orderItem.innerHTML = `
-                    <div class="item-name">${item.drink_name}(${item.size}) x${item.quantity}</div>
-                    <div class="item-options">(${item.sugar}, ${item.ice})</div>
-                `;
-                container.appendChild(orderItem);
-            });
-            
-            document.getElementById('orderResult').classList.remove('hidden');
-
-            // 確認按鈕處理
-            document.getElementById('confirmOrder').addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/confirm_order', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            order_details: orderDetails,
-                            speech_text: speechText
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    if (result.status === 'success') {
-                        // 顯示製作中訊息
-                        container.innerHTML = '<div class="success-message">好的，尊貴的客人請稍候，正在為您製作飲品</div>';
-                        document.querySelector('.button-group').classList.add('hidden');
-                        
-                        // 5秒後重置頁面
-                        setTimeout(() => {
-                            // 隱藏訂單結果
-                            document.getElementById('orderResult').classList.add('hidden');
-                            // 重新啟用開始按鈕
-                            document.getElementById('startOrder').disabled = false;
-                            // 隱藏提示訊息
-                            document.getElementById('orderPrompt').classList.add('hidden');
-                            // 清空訂單詳情
-                            container.innerHTML = '';
-                        }, 5000);
-                    }
-                } catch (error) {
-                    console.error('確認訂單時發生錯誤:', error);
-                }
-            });
-        }
-
-        document.getElementById('startOrder').addEventListener('click', async function() {
-            try {
-                this.disabled = true;
-                document.getElementById('orderPrompt').classList.remove('hidden');
-                console.log('開始發送請求...'); // 新增除錯訊息
-
-                const response = await fetch('/stop_recording', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                console.log('收到回應:', response); // 新增除錯訊息
-                
-                const result = await response.json();
-                console.log('處理結果:', result); // 新增除錯訊息
-                
-                if (result.status === 'success') {
-                    displayOrder(result.order_details, result.speech_text);
-                } else {
-                    console.error('處理失敗:', result.message);
-                }
-            } catch (error) {
-                console.error('發生錯誤:', error);
-                this.disabled = false;
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

@@ -14,7 +14,7 @@ class OrderAnalyzer:
             1. sugar只能是(全糖,半糖,無糖)
             2. ice只能是(正常冰,少冰,微冰,去冰,熱)
             3. size只能是(大杯,小杯)
-            4. drink_name只能是菜單中的品項
+            4. drink_name只能是菜單中的品項（self.menu）
             5. 直接回傳JSON格式，不要加入markdown標記
             
             回傳格式範例：

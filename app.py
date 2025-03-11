@@ -44,13 +44,21 @@ analyzer = OrderAnalyzer()
 @app.route('/stop_recording', methods=['POST'])
 def stop_recording():
     try:
-        # 模擬錄音輸入
-        text = "我要一杯大杯冰綠茶，全糖微冰，兩杯珍珠奶茶半糖去冰，再一杯溫的紅茶，半糖，兩杯青茶，一杯無糖微冰，一杯全糖去冰"
-        print(f"處理訂單文字: {text}")  # 新增除錯訊息
+        # 從請求中獲取文字
+        data = request.json
+        if not data or 'text' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': '未收到訂單文字'
+            })
+        
+        # 使用使用者輸入的文字
+        text = data['text']
+        print(f"處理訂單文字: {text}")  # 除錯訊息
         
         # 分析訂單
         order_details = analyzer.analyze_order(text)
-        print(f"分析結果: {order_details}")  # 新增除錯訊息
+        print(f"分析結果: {order_details}")  # 除錯訊息
 
         return jsonify({
             'status': 'success',
@@ -59,11 +67,16 @@ def stop_recording():
         })
 
     except Exception as e:
-        print(f"發生錯誤: {str(e)}")  # 新增除錯訊息
+        print(f"處理訂單時發生錯誤：{str(e)}")  # 除錯訊息
         return jsonify({
             'status': 'error',
-            'message': f'處理時發生錯誤: {str(e)}'
+            'message': str(e)
         })
+
+@app.route('/menu')
+def menu():
+    return render_template('menu.html')
+
 
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
@@ -97,4 +110,4 @@ def confirm_order():
         })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,port="5002")
