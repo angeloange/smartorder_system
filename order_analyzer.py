@@ -3,7 +3,7 @@ import json
 
 class OrderAnalyzer:
     def __init__(self):
-        self.client = OpenAI()  # 確保環境變數中有 OPENAI_API_KEY
+        self.client = OpenAI()
         self.menu = ["珍珠奶茶", "紅茶", "綠茶", "奶茶", "青茶"]
 
     def analyze_order(self, text):
@@ -29,11 +29,12 @@ class OrderAnalyzer:
 
             # 呼叫 OpenAI API
             completion = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",  # 改用更經濟的模型
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": text}
-                ]
+                ],
+                temperature=0.7  # 添加溫度參數以控制回應的創造性
             )
             
             result = completion.choices[0].message.content

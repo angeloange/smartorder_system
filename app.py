@@ -9,6 +9,7 @@ import io
 import numpy as np
 from pydub import AudioSegment
 from order_analyzer import OrderAnalyzer
+import json  # 新增這行
 load_dotenv()
 
 app = Flask(__name__)
@@ -24,11 +25,16 @@ app.config['UPLOAD_FOLDER'] = 'temp_audio'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 class VoiceOrder(db.Model):
-    __tablename__ = 'voice_orders'  # 對應到 MySQL 的資料表名稱
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 自動遞增的 ID
-    speech_text = db.Column(db.Text, nullable=False)  # 語音辨識文字
-    created_at = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp())  # 建立時間
-
+    __tablename__ = 'voice_orders'
+    order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    drink_name = db.Column(db.String(100), nullable=False)
+    ice_type = db.Column(db.String(50), nullable=False)
+    suger_type = db.Column(db.String(50), nullable=False)
+    order_data = db.Column(db.Text)
+    order_time = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp())
+    weather_status = db.Column(db.String(100))
+    weather_temperature = db.Column(db.DECIMAL(4,1))
+    phone_number = db.Column(db.String(20))
 @app.route('/')
 def index():
     return render_template('index.html')  # 只需要提供檔案名稱
@@ -57,6 +63,37 @@ def stop_recording():
         return jsonify({
             'status': 'error',
             'message': f'處理時發生錯誤: {str(e)}'
+        })
+
+@app.route('/confirm_order', methods=['POST'])
+def confirm_order():
+    try:
+        data = request.json
+        print(f"收到訂單資料：{data}")  # 除錯訊息
+        
+        # 處理每一個飲料訂單
+        for order_item in data['order_details']:
+            new_order = VoiceOrder(
+                drink_name=order_item['drink_name'],
+                ice_type=order_item['ice'],
+                suger_type=order_item['sugar'],
+                order_data=json.dumps(data['order_details'])  # 儲存完整訂單資料
+            )
+            db.session.add(new_order)
+        
+        db.session.commit()
+        print("所有訂單已儲存")  # 除錯訊息
+
+        return jsonify({
+            'status': 'success',
+            'message': '好的，尊貴的客人請稍候，正在為您製作飲品'
+        })
+
+    except Exception as e:
+        print(f"儲存訂單時發生錯誤：{str(e)}")  # 除錯訊息
+        return jsonify({
+            'status': 'error',
+            'message': f'儲存訂單時發生錯誤: {str(e)}'
         })
 
 if __name__ == '__main__':
