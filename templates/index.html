@@ -2,33 +2,172 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智慧點餐系統</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>智慧點餐系統</h1>
-        
-        <div class="input-section">
-            <input type="text" id="orderInput" class="order-input" 
-                   placeholder="例：我要一杯大杯冰綠茶，全糖微冰" />
-        </div>
-        
-        <button id="startOrder">開始點餐</button>
-        
-        <div id="orderPrompt" class="hidden">
-            <p>正在處理您的訂單...</p>
+        <!-- 左側面板 -->
+        <div class="interaction-panel">
+            <div class="panel-content">
+                <h2>智慧點餐專員</h2>
+                
+                <!-- 在點餐輸入區域修改 -->
+                <div class="order-input-section">
+                    <div class="input-mode-switch">
+                        <button id="textModeBtn" class="mode-btn active">文字輸入</button>
+                        <button id="voiceModeBtn" class="mode-btn">語音輸入</button>
+                    </div>
+                    <div id="orderPrompt" class="order-prompt hidden">
+                        <div class="status-message preparing hidden">請稍候，正在準備錄音...</div>
+                        <div class="status-message recording hidden">請開始點餐（5秒）</div>
+                        <div class="status-message processing hidden">正在處理語音辨識...</div>
+                        <div class="status-message analyzing hidden">正在分析您的訂單...</div>
+                    </div>
+                    <!-- 文字輸入模式 -->
+                    <div id="textInputMode">
+                        <input type="text" id="orderInput" class="order-input" 
+                            placeholder="例：我要一杯大杯冰綠茶，全糖微冰" />
+                    </div>
+                    
+                    <!-- 語音輸入模式 -->
+                    <div id="voiceInputMode" class="hidden">
+                        <div class="voice-status">按下開始點餐進行錄音</div>
+                    </div>
+                    
+                    <button id="startOrder" class="btn-primary">開始點餐</button>
+                </div>
+
+                <!-- 訂單處理提示 -->
+                <div id="orderPrompt" class="order-prompt hidden">
+                    <p>正在處理您的訂單...</p>
+                </div>
+
+                <!-- 訂單確認區域 -->
+                <div id="orderResult" class="order-result hidden">
+                    <div id="orderDetails" class="order-details"></div>
+                    <div class="button-group">
+                        <button id="confirmOrder" class="btn-confirm">確認訂單</button>
+                        <button id="cancelOrder" class="btn-cancel">取消</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 左側底部的兩個框框 -->
+            <div class="bottom-info">
+                <div class="info-box">
+                    <h3>目前取餐號碼</h3>
+                    <div class="number-display">A12</div>
+                    <div class="info-text">請保持關注叫號</div>
+                </div>
+                <div class="info-box">
+                    <h3>等候資訊</h3>
+                    <div class="number-display">5</div>
+                    <div class="info-text">預計等待 8 分鐘</div>
+                </div>
+            </div>
         </div>
 
-        <div id="orderResult" class="hidden">
-            <div id="orderDetails" class="order-container"></div>
-            <div class="button-group">
-                <button id="confirmOrder">確認訂單</button>
-                <button id="cancelOrder">取消</button>
+        <!-- 右側面板 -->
+        <div class="menu-panel">
+            <div class="panel-content">
+                <div class="menu-section">
+                    <h2>飲品菜單</h2>
+                    <div class="menu-grid">
+                        <!-- 左欄：茶飲 -->
+                        <div class="category">
+                            <h3>茶飲</h3>
+                            <div class="items">
+                                <div class="item">
+                                    <span class="name">青茶</span>
+                                    <span class="price">45元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">烏龍茶</span>
+                                    <span class="price">45元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">紅茶</span>
+                                    <span class="price">40元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">綠茶</span>
+                                    <span class="price">40元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">檸檬茶</span>
+                                    <span class="price">50元</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 右欄：奶茶 -->
+                        <div class="category">
+                            <h3>奶茶</h3>
+                            <div class="items">
+                                <div class="item">
+                                    <span class="name">珍珠奶茶</span>
+                                    <span class="price">55元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">波霸奶茶</span>
+                                    <span class="price">55元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">椰果奶茶</span>
+                                    <span class="price">55元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">布丁奶茶</span>
+                                    <span class="price">60元</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 下方：咖啡 -->
+                        <div class="category full-width">
+                            <h3>咖啡</h3>
+                            <div class="items">
+                                <div class="item">
+                                    <span class="name">美式咖啡</span>
+                                    <span class="price">50元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">拿鐵咖啡</span>
+                                    <span class="price">60元</span>
+                                </div>
+                                <div class="item">
+                                    <span class="name">卡布奇諾</span>
+                                    <span class="price">60元</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右側底部的兩個框框 -->
+            <div class="bottom-info">
+                <div class="info-box">
+                    <h3>熱銷排行</h3>
+                    <div class="rank-list">
+                        <div class="rank-item">1. 珍珠奶茶</div>
+                        <div class="rank-item">2. 美式咖啡</div>
+                        <div class="rank-item">3. 烏龍茶</div>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h3>天氣推薦</h3>
+                    <div class="rank-list">
+                        <div class="rank-item">1. 冰綠茶</div>
+                        <div class="rank-item">2. 檸檬冰茶</div>
+                        <div class="rank-item">3. 冰美式</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
 </body>
 </html>

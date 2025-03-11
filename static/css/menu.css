@@ -127,3 +127,127 @@ body {
     padding: 5px 0;
     font-size: 0.9em;
 }
+
+.order-input-section {
+    margin: 20px 0;
+}
+
+.order-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    margin-bottom: 10px;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background: var(--secondary-color);
+}
+
+.order-prompt {
+    text-align: center;
+    padding: 20px;
+    color: var(--primary-color);
+}
+
+.order-details {
+    margin: 15px 0;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-confirm, .btn-cancel {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.btn-confirm {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-cancel {
+    background: #dc3545;
+    color: white;
+}
+
+.hidden {
+    display: none;
+}
+
+.input-mode-switch {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.mode-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+#voiceInputMode {
+    text-align: center;
+    padding: 20px;
+    background: var(--background-color);
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+
+.order-prompt {
+    text-align: center;
+    padding: 20px;
+    margin: 15px 0;
+    background: var(--background-color);
+    border-radius: 8px;
+}
+
+.status-message {
+    padding: 10px;
+    font-size: 1.1em;
+    color: var(--primary-color);
+}
+
+.status-message.recording {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.status-message.processing {
+    color: #0d6efd;
+}
+
+.hidden {
+    display: none;
+}

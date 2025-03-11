@@ -36,29 +36,46 @@ class VoiceOrder(db.Model):
     weather_temperature = db.Column(db.DECIMAL(4,1))
     phone_number = db.Column(db.String(20))
 @app.route('/')
-def index():
-    return render_template('index.html')  # 只需要提供檔案名稱
+def menu():
+    return render_template('index.html')
 
 analyzer = OrderAnalyzer()
 
 @app.route('/stop_recording', methods=['POST'])
 def stop_recording():
     try:
-        # 從請求中獲取文字
-        data = request.json
-        if not data or 'text' not in data:
+        if 'audio' not in request.files:
             return jsonify({
                 'status': 'error',
-                'message': '未收到訂單文字'
-            })
+                'message': '未收到音訊檔案'
+            }), 400
+
+        audio_file = request.files['audio']
         
-        # 使用使用者輸入的文字
-        text = data['text']
-        print(f"處理訂單文字: {text}")  # 除錯訊息
+        # 確保臨時資料夾存在
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+
+        # 處理音訊檔案
+        temp_webm = os.path.join(app.config['UPLOAD_FOLDER'], 'temp_audio.webm')
+        audio_file.save(temp_webm)
+
+        # 轉換為 WAV 格式
+        temp_wav = os.path.join(app.config['UPLOAD_FOLDER'], 'temp_audio.wav')
+        audio = AudioSegment.from_file(temp_webm)
+        audio.export(temp_wav, format="wav")
+
+        # 進行語音辨識
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(temp_wav) as source:
+            audio_data = recognizer.record(source)
+            text = recognizer.recognize_google(audio_data, language='zh-TW')
+
+        print(f"辨識結果: {text}")  # 除錯用
         
         # 分析訂單
         order_details = analyzer.analyze_order(text)
-        print(f"分析結果: {order_details}")  # 除錯訊息
+        print(f"訂單分析: {order_details}")  # 除錯用
 
         return jsonify({
             'status': 'success',
@@ -67,16 +84,11 @@ def stop_recording():
         })
 
     except Exception as e:
-        print(f"處理訂單時發生錯誤：{str(e)}")  # 除錯訊息
+        print(f"錯誤: {str(e)}")  # 除錯用
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': f'處理時發生錯誤: {str(e)}'
         })
-
-@app.route('/menu')
-def menu():
-    return render_template('menu.html')
-
 
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
