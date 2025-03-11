@@ -45,6 +45,15 @@
             padding: 10px 20px;
             margin-right: 10px;
         }
+        .success-message {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2em;
+            color: #28a745;
+            background-color: #d4edda;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
@@ -154,6 +163,7 @@
             const container = document.getElementById('orderDetails');
             container.innerHTML = '';
             
+            // 顯示訂單內容
             orderDetails.forEach(item => {
                 const orderItem = document.createElement('div');
                 orderItem.classList.add('order-item');
@@ -165,9 +175,9 @@
             });
             
             document.getElementById('orderResult').classList.remove('hidden');
-        
-            // 確認按鈕事件處理
-            document.getElementById('confirmOrder').onclick = async () => {
+
+            // 確認按鈕處理
+            document.getElementById('confirmOrder').addEventListener('click', async () => {
                 try {
                     const response = await fetch('/confirm_order', {
                         method: 'POST',
@@ -182,18 +192,26 @@
                     
                     const result = await response.json();
                     if (result.status === 'success') {
-                        alert('訂單已確認！');
-                        // 可以清空或重置表單
+                        // 顯示製作中訊息
+                        container.innerHTML = '<div class="success-message">好的，尊貴的客人請稍候，正在為您製作飲品</div>';
+                        document.querySelector('.button-group').classList.add('hidden');
+                        
+                        // 5秒後重置頁面
+                        setTimeout(() => {
+                            // 隱藏訂單結果
+                            document.getElementById('orderResult').classList.add('hidden');
+                            // 重新啟用開始按鈕
+                            document.getElementById('startOrder').disabled = false;
+                            // 隱藏提示訊息
+                            document.getElementById('orderPrompt').classList.add('hidden');
+                            // 清空訂單詳情
+                            container.innerHTML = '';
+                        }, 5000);
                     }
                 } catch (error) {
                     console.error('確認訂單時發生錯誤:', error);
                 }
-            };
-        
-            // 取消按鈕事件處理
-            document.getElementById('cancelOrder').onclick = () => {
-                document.getElementById('orderResult').classList.add('hidden');
-            };
+            });
         }
 
         document.getElementById('startOrder').addEventListener('click', async function() {

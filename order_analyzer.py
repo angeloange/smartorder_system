@@ -15,6 +15,7 @@ class OrderAnalyzer:
             2. ice只能是(正常冰,少冰,微冰,去冰,熱)
             3. size只能是(大杯,小杯)
             4. drink_name只能是菜單中的品項
+            5. 直接回傳JSON格式，不要加入markdown標記
             
             回傳格式範例：
             [
@@ -27,24 +28,28 @@ class OrderAnalyzer:
                 }
             ]"""
 
-            # 呼叫 OpenAI API
             completion = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # 改用更經濟的模型
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": text}
                 ],
-                temperature=0.7  # 添加溫度參數以控制回應的創造性
+                temperature=0.7
             )
             
-            result = completion.choices[0].message.content
-            print(f"API 回應: {result}")  # 新增除錯訊息
+            result = completion.choices[0].message.content.strip()
+            print(f"API 回應: {result}")
             
-            # 確保回應是有效的 JSON
-            return json.loads(result)
+            # 移除可能的 markdown 標記
+            if result.startswith('```'):
+                result = result.split('```')[1]
+                if result.startswith('json'):
+                    result = result[4:]
+            
+            return json.loads(result.strip())
             
         except Exception as e:
-            print(f"OpenAI API 錯誤: {str(e)}")  # 新增除錯訊息
+            print(f"OpenAI API 錯誤: {str(e)}")
             return {
                 "status": "error",
                 "message": f"分析訂單時發生錯誤: {str(e)}"
