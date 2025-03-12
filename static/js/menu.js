@@ -201,7 +201,39 @@ document.addEventListener('DOMContentLoaded', function() {
         startOrderBtn.disabled = false;
         orderInput.value = '';
     };
+
+    // 立即更新熱銷排行
+    updateTopDrinks();
+    // 每5分鐘更新一次
+    setInterval(updateTopDrinks, 300000);
 });
+
+async function updateTopDrinks() {
+    try {
+        console.log('開始更新熱銷飲料');  // 除錯用
+        const response = await fetch('/monthly_top_drinks');
+        const result = await response.json();
+        
+        console.log('API 回應:', result);  // 除錯用
+        
+        if (result.status === 'success' && result.data.length > 0) {
+            const topDrinksContainer = document.querySelector('.rank-list.hot-sales');            if (topDrinksContainer) {
+                topDrinksContainer.innerHTML = result.data
+                    .map((item, index) => `
+                        <div class="rank-item">
+                            ${index + 1}. ${item.drink_name} (${item.count}杯)
+                        </div>
+                    `).join('');
+            } else {
+                console.error('找不到熱銷排行容器(.hot-sales)');
+            }
+        } else {
+            console.log('沒有熱銷資料或獲取失敗');
+        }
+    } catch (error) {
+        console.error('更新熱銷飲料失敗:', error);
+    }
+}
 
 function displayOrder(orderDetails, speechText) {
     const container = document.getElementById('orderDetails');

@@ -10,6 +10,8 @@ import numpy as np
 from pydub import AudioSegment
 from order_analyzer import OrderAnalyzer
 import json  # 新增這行
+from sqlalchemy import func, extract
+from datetime import datetime
 load_dotenv()
 
 app = Flask(__name__)
@@ -142,6 +144,45 @@ def analyze_text():
         })
 
     except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/monthly_top_drinks', methods=['GET'])
+def get_monthly_top_drinks():
+    try:
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        # 查詢當月熱銷飲料
+        top_drinks = db.session.query(
+            VoiceOrder.drink_name,
+            func.count(VoiceOrder.drink_name).label('count')
+        ).filter(
+            extract('month', VoiceOrder.order_time) == current_month,
+            extract('year', VoiceOrder.order_time) == current_year
+        ).group_by(
+            VoiceOrder.drink_name
+        ).order_by(
+            func.count(VoiceOrder.drink_name).desc()
+        ).limit(3).all()
+        
+        # 格式化結果
+        result = [
+            {
+                'drink_name': drink_name,
+                'count': count
+            } for drink_name, count in top_drinks
+        ]
+        
+        return jsonify({
+            'status': 'success',
+            'data': result
+        })
+        
+    except Exception as e:
+        print(f"查詢熱銷飲料時發生錯誤：{str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)
