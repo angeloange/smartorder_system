@@ -130,10 +130,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.disabled = true;
                 orderPrompt.classList.remove('hidden');
                 orderResult.classList.add('hidden');
-                updateStatus('text', 'processing');
                 
-                // 修改這裡：使用正確的 API 端點和資料格式
-                const response = await fetch('/analyze_text', {  // 新的端點
+                console.log('發送文字訂單:', orderInput.value); // 除錯用
+                
+                const response = await fetch('/analyze_text', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -143,23 +143,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                 });
                 
+                console.log('收到回應'); // 除錯用
+                
                 const result = await response.json();
+                console.log('處理結果:', result); // 除錯用
                 
                 if (result.status === 'success') {
                     currentOrderDetails = result.order_details;
-                    currentSpeechText = orderInput.value;  // 使用輸入文字
+                    currentSpeechText = orderInput.value;
                     displayOrder(result.order_details, currentSpeechText);
+                    orderPrompt.classList.add('hidden');
+                    orderResult.classList.remove('hidden');
                 } else {
-                    alert('訂單處理失敗：' + result.message);
+                    throw new Error(result.message || '處理失敗');
                 }
-                
-                orderPrompt.classList.add('hidden');
-                
+
             } catch (error) {
                 console.error('處理訂單時發生錯誤:', error);
                 alert('處理訂單時發生錯誤，請稍後再試');
             } finally {
                 this.disabled = false;
+                orderPrompt.classList.add('hidden');
             }
         }
     });
