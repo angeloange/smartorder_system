@@ -224,7 +224,6 @@ body {
     margin-bottom: 15px;
 }
 
-
 .order-prompt {
     text-align: center;
     padding: 20px;
@@ -250,4 +249,84 @@ body {
 
 .hidden {
     display: none;
+}
+
+.bottom-language-switch {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 96px;  /* 保持寬度不變 */
+    height: 32px;
+}
+
+.toggle-input {
+    display: none;
+}
+
+.toggle-label {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;  /* 移除 padding */
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-label:before {
+    content: '';
+    position: absolute;
+    width: 48px;  /* 調整滑塊寬度 */
+    height: 26px;
+    border-radius: 13px;
+    background-color: white;
+    left: 2px;    /* 調整左邊距 */
+    transform: translateX(0);
+    transition: 0.3s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-input:checked + .toggle-label:before {
+    transform: translateX(44px);  /* 調整移動距離，使右邊距也是 2px */
+}
+
+.toggle-text-zh,
+.toggle-text-en {
+    color: var(--primary-color);
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 1;
+    transition: color 0.3s;
+    width: 44px;
+    text-align: center;
+    position: relative;
+}
+
+.toggle-text-zh {
+    margin-left: 3px;
+}
+
+.toggle-text-en {
+    margin-right: 3px;
+}
+
+/* 當目前是英文模式時，中文文字顯示為白色 */
+.toggle-input:checked + .toggle-label .toggle-text-zh {
+    color: white;
+}
+
+/* 當目前是中文模式時，英文文字顯示為白色 */
+.toggle-input:not(:checked) + .toggle-label .toggle-text-en {
+    color: white;
 }

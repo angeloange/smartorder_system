@@ -26,17 +26,20 @@ app.config['UPLOAD_FOLDER'] = 'temp_audio'
 # 確保臨時音訊檔案夾存在
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# 修改 VoiceOrder 模型
 class VoiceOrder(db.Model):
     __tablename__ = 'voice_orders'
     order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     drink_name = db.Column(db.String(100), nullable=False)
     ice_type = db.Column(db.String(50), nullable=False)
     suger_type = db.Column(db.String(50), nullable=False)
-    order_data = db.Column(db.Text)
+    order_data = db.Column(db.Text)  # 保持這個欄位
     order_time = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp())
     weather_status = db.Column(db.String(100))
     weather_temperature = db.Column(db.DECIMAL(4,1))
     phone_number = db.Column(db.String(20))
+    # 移除 speech_text 欄位，因為我們使用 order_data
+
 @app.route('/')
 def menu():
     return render_template('index.html')
@@ -92,24 +95,27 @@ def stop_recording():
             'message': f'處理時發生錯誤: {str(e)}'
         })
 
+# 修改 confirm_order 函數
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
     try:
         data = request.json
-        print(f"收到訂單資料：{data}")  # 除錯訊息
+        order_details = data.get('order_details', [])
+        speech_text = data.get('speech_text', '')
         
-        # 處理每一個飲料訂單
-        for order_item in data['order_details']:
-            new_order = VoiceOrder(
-                drink_name=order_item['drink_name'],
-                ice_type=order_item['ice'],
-                suger_type=order_item['sugar'],
-                order_data=json.dumps(data['order_details'])  # 儲存完整訂單資料
-            )
-            db.session.add(new_order)
+        for order in order_details:
+            for _ in range(order.get('quantity', 1)):
+                new_order = VoiceOrder(
+                    drink_name=order.get('drink_name'),
+                    ice_type=order.get('ice'),      
+                    suger_type=order.get('sugar'),  
+                    order_data=speech_text,  # 這裡改用 order_data 存儲語音文字
+                )
+                db.session.add(new_order)
+                print(f"新增訂單: {order}")
         
         db.session.commit()
-        print("所有訂單已儲存")  # 除錯訊息
+        print(f"已建立 {sum(order['quantity'] for order in order_details)} 筆訂單記錄")
 
         return jsonify({
             'status': 'success',
@@ -117,10 +123,11 @@ def confirm_order():
         })
 
     except Exception as e:
-        print(f"儲存訂單時發生錯誤：{str(e)}")  # 除錯訊息
+        db.session.rollback()
+        print(f"儲存訂單時發生錯誤：{str(e)}")
         return jsonify({
             'status': 'error',
-            'message': f'儲存訂單時發生錯誤: {str(e)}'
+            'message': str(e)
         })
 
 @app.route('/analyze_text', methods=['POST'])
