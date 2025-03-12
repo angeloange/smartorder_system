@@ -121,5 +121,31 @@ def confirm_order():
             'message': f'儲存訂單時發生錯誤: {str(e)}'
         })
 
+@app.route('/analyze_text', methods=['POST'])
+def analyze_text():
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        
+        if not text:
+            return jsonify({
+                'status': 'error',
+                'message': '未收到訂單內容'
+            }), 400
+
+        # 分析訂單
+        order_details = analyzer.analyze_order(text)
+
+        return jsonify({
+            'status': 'success',
+            'order_details': order_details
+        })
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 if __name__ == '__main__':
     app.run(debug=True,port="5002")
