@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const voiceModeBtn = document.getElementById('voiceModeBtn');
     const textInputMode = document.getElementById('textInputMode');
     const voiceInputMode = document.getElementById('voiceInputMode');
+    const langToggle = document.getElementById('langToggle');
+    let currentLang = 'zh-TW';
     let isVoiceMode = false;
 
     // 切換模式
@@ -210,6 +212,15 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTopDrinks();
     // 每5分鐘更新一次
     setInterval(updateTopDrinks, 300000);
+
+    // 綁定語言切換事件
+    langToggle.onchange = function() {
+        currentLang = this.checked ? 'en' : 'zh-TW';
+        updateTranslations(currentLang);
+    };
+
+    // 在 DOMContentLoaded 的最後呼叫初始化
+    updateTranslations(currentLang);
 });
 
 async function updateTopDrinks() {
@@ -254,4 +265,80 @@ function displayOrder(orderDetails, speechText) {
     });
     
     document.getElementById('orderResult').classList.remove('hidden');
+}
+
+// 更新所有翻譯的函數
+function updateTranslations(lang) {
+    // 更新所有帶有 data-translate 屬性的元素
+    document.querySelectorAll('[data-translate]').forEach(element => {
+        const key = element.getAttribute('data-translate');
+        if (translations[lang][key]) {
+            if (element.tagName === 'INPUT') {
+                element.placeholder = translations[lang][key];
+            } else {
+                element.textContent = translations[lang][key];
+            }
+        }
+    });
+
+    // 更新菜單項目
+    document.querySelectorAll('.item').forEach(item => {
+        const drinkKey = item.getAttribute('data-drink-key');
+        if (drinkKey) {
+            const nameElement = item.querySelector('.name');
+            const priceElement = item.querySelector('.price');
+            
+            if (nameElement && translations[lang].drinks[drinkKey]) {
+                nameElement.textContent = translations[lang].drinks[drinkKey];
+            }
+            
+            if (priceElement) {
+                const price = priceElement.getAttribute('data-price');
+                priceElement.textContent = `${price}${translations[lang].currency}`;
+            }
+        }
+    });
+
+    // 更新熱銷排行的顯示格式
+    const hotSaleItems = document.querySelectorAll('.rank-item');
+    hotSaleItems.forEach(item => {
+        const count = item.getAttribute('data-count');
+        if (count) {
+            const drinkName = item.getAttribute('data-drink-key');
+            if (drinkName && translations[lang].drinks[drinkName]) {
+                item.textContent = `${translations[lang].drinks[drinkName]} (${count}${translations[lang].unit})`;
+            }
+        }
+    });
+
+    // 更新菜單分類標題
+    document.querySelectorAll('.category h3').forEach(header => {
+        const category = header.closest('.category');
+        if (category) {
+            const categoryType = category.getAttribute('data-category');
+            if (categoryType) {
+                header.textContent = translations[lang][`${categoryType}Section`];
+            }
+        }
+    });
+
+    // 更新價格單位
+    document.querySelectorAll('.price').forEach(price => {
+        const priceValue = price.getAttribute('data-price');
+        if (priceValue) {
+            price.textContent = `${priceValue}${translations[lang].currency}`;
+        }
+    });
+
+    // 更新狀態訊息
+    const orderPrompt = document.getElementById('orderPrompt');
+    if (orderPrompt && orderPrompt.textContent) {
+        updateStatus(isVoiceMode ? 'voice' : 'text');
+    }
+
+    // 更新語音提示
+    const voiceStatus = document.querySelector('.voice-status');
+    if (voiceStatus) {
+        voiceStatus.textContent = translations[lang].voicePrompt;
+    }
 }
