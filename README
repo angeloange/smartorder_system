@@ -1,3 +1,43 @@
-目前的程式碼
-Flask窗口
-app.py
+# 智慧點餐系統
+
+## 安裝步驟
+
+1. 建立虛擬環境
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Mac/Linux
+```
+
+2. 安裝相依套件
+```bash
+pip install -r requirements.txt
+```
+
+3. 初始化資料庫
+```bash
+python init_db.py
+```
+
+4. 執行應用程式
+```bash
+python app.py
+```
+
+## 專案結構
+```
+智慧點餐/
+├── instance/           # SQLite 資料庫
+├── static/            # 靜態檔案
+├── templates/         # HTML 模板
+├── app.py            # 主程式
+├── config.py         # 設定檔
+├── init_db.py        # 資料庫初始化
+└── requirements.txt   # 相依套件
+```
+
+## 注意事項
+- 確保系統環境變數中已設定 `OPENAI_API_KEY`
+- 如果沒有設定環境變數，可以在終端機中執行：
+```bash
+export OPENAI_API_KEY=您的API金鑰
+```

@@ -12,14 +12,15 @@ from order_analyzer import OrderAnalyzer
 import json  # 新增這行
 from sqlalchemy import func, extract
 from datetime import datetime
+from config import Config
 load_dotenv()
 
 app = Flask(__name__)
-# MySQL 資料庫連接設定
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://voice_order_user:24999441@localhost/voice_order_db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.config.from_object(Config)
 db = SQLAlchemy(app)
+
+# 確保 instance 資料夾存在
+os.makedirs('instance', exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = 'temp_audio'
 

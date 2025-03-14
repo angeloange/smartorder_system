@@ -1,5 +1,7 @@
-.env
+
 .venv/
 __pycache__/
 *.pyc
 temp_audio/
+instance/*.db
+.DS_Store
