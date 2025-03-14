@@ -1,10 +1,6 @@
 import os
 
 class Config:
-    # 取得專案根目錄
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    
-    # 使用 SQLite
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'instance', 'voice_order.db')
+    # AWS RDS MySQL 設定
+    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://user1:cAG2x14H6Pw74qW2#73FdhG1A4f#IRfaT1TFE1F2@my-database.cx2cm6iks409.ap-northeast-1.rds.amazonaws.com/beverage_db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = 'your-secret-key'

@@ -1,56 +1,39 @@
 from openai import OpenAI
-import json
+import os
 
 class OrderAnalyzer:
     def __init__(self):
-        self.client = OpenAI()
-        self.menu = ["珍珠奶茶", "紅茶", "綠茶", "奶茶", "青茶"]
+        try:
+            api_key = os.getenv('OPENAI_API_KEY')
+            self.client = OpenAI(api_key=api_key)
+        except Exception as e:
+            print(f"初始化 OpenAI 客戶端時發生錯誤：{str(e)}")
+            raise
 
     def analyze_order(self, text):
         try:
-            # 系統提示詞
-            system_prompt = """你是一位飲料店的點餐人員，請分析客人的點餐需求並回傳 JSON 格式的訂單內容。
-            規則：
-            1. sugar只能是(全糖,半糖,無糖)
-            2. ice只能是(正常冰,少冰,微冰,去冰,熱)
-            3. size只能是(大杯,小杯)
-            4. drink_name只能是菜單中的品項（self.menu）
-            5. 直接回傳JSON格式，不要加入markdown標記
-            
-            回傳格式範例：
-            [
-                {
-                    "drink_name": "珍珠奶茶",
-                    "size": "大杯",
-                    "sugar": "半糖",
-                    "ice": "少冰",
-                    "quantity": 1
-                }
-            ]"""
-
-            completion = self.client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": "你是一個飲料點餐助手。請從顧客的訂單中提取：飲料名稱、容量大小、冰塊、糖度。"},
                     {"role": "user", "content": text}
-                ],
-                temperature=0.7
+                ]
             )
             
-            result = completion.choices[0].message.content.strip()
-            print(f"API 回應: {result}")
-            
-            # 移除可能的 markdown 標記
-            if result.startswith('```'):
-                result = result.split('```')[1]
-                if result.startswith('json'):
-                    result = result[4:]
-            
-            return json.loads(result.strip())
+            return self._parse_response(response.choices[0].message.content)
             
         except Exception as e:
-            print(f"OpenAI API 錯誤: {str(e)}")
+            print(f"分析訂單時發生錯誤：{str(e)}")
             return {
-                "status": "error",
-                "message": f"分析訂單時發生錯誤: {str(e)}"
+                'status': 'error',
+                'message': str(e)
             }
+
+    def _parse_response(self, response):
+        # 簡單的回應範例
+        return [{
+            'drink_name': '綠茶',
+            'size': '大杯',
+            'ice': 'normal',
+            'sugar': 'half'
+        }]

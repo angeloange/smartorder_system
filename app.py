@@ -5,22 +5,55 @@ import json
 import os
 import datetime
 from datetime import datetime
+from config import Config
+from enum import Enum
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from config import Config
+
 app = Flask(__name__)
+app.config.from_object(Config)
 
-# 資料庫設定
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://voice_order_user:24999441@localhost/voice_order_db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# 重新初始化資料庫連線
+db = SQLAlchemy()
+db.init_app(app)
 
-db = SQLAlchemy(app)
+# 初始化 OrderAnalyzer
 analyzer = OrderAnalyzer()
 
+class Size(Enum):
+    LARGE = '大杯'
+    SMALL = '小杯'
+
+class IceType(Enum):
+    ICED = 'iced'
+    HOT = 'hot'
+    ROOM_TEMP = 'room_temp'
+
+class SugarType(Enum):
+    FULL = 'full'
+    HALF = 'half'
+    FREE = 'free'
+
+class WeatherStatus(Enum):
+    SUNNY = 'sunny'
+    CLOUDY = 'cloudy'
+    RAINY = 'rainy'
+    STORMY = 'stormy'
+
 class VoiceOrder(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'orders'  # 改用正確的資料表名稱
+    
+    order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     drink_name = db.Column(db.String(100), nullable=False)
-    ice_type = db.Column(db.String(20), nullable=False)
-    suger_type = db.Column(db.String(20), nullable=False)
-    order_data = db.Column(db.Text, nullable=False)
-    order_time = db.Column(db.DateTime, default=datetime.utcnow)
+    size = db.Column(db.Enum(Size), nullable=False, default=Size.SMALL)
+    ice_type = db.Column(db.Enum(IceType), nullable=False, default=IceType.ROOM_TEMP)
+    sugar_type = db.Column(db.Enum(SugarType), nullable=False, default=SugarType.HALF)
+    order_date = db.Column(db.Date, default=datetime.utcnow().date)
+    order_time = db.Column(db.Time, default=datetime.utcnow().time)
+    weather_status = db.Column(db.Enum(WeatherStatus), nullable=False, default=WeatherStatus.CLOUDY)
+    temperature = db.Column(db.Numeric(4,2), nullable=False, default=20.00)
+    phone_number = db.Column(db.CHAR(10), nullable=True)
 
 @app.route('/')
 def index():
@@ -32,7 +65,7 @@ def analyze_text():
         data = request.get_json()
         text = data.get('text', '')
         
-        # 使用OrderAnalyzer進行分析
+        # 修改這裡：使用實例方法而不是類別方法
         order_details = analyzer.analyze_order(text)
         
         if isinstance(order_details, dict) and 'status' in order_details:
@@ -58,27 +91,47 @@ def confirm_order():
         
         # 處理每個飲料訂單
         for order_item in data['order_details']:
-            new_order = VoiceOrder(
-                drink_name=order_item['drink_name'],
-                ice_type=order_item['ice'],
-                suger_type=order_item['sugar'],
-                order_data=json.dumps(data['order_details'])
+            # 將 ice 和 sugar 轉換為正確的格式
+            new_order = {
+                'drink_name': order_item['drink_name'],
+                'size': order_item.get('size', '小杯'),
+                'ice_type': order_item['ice'],
+                'sugar_type': order_item['sugar'],
+                'order_date': datetime.now().date(),
+                'order_time': datetime.now().time(),
+                'weather_status': WeatherStatus.CLOUDY.value,  # 使用 enum 值
+                'temperature': 20.00,
+                'phone_number': data.get('phone_number')
+            }
+            
+            # 使用 SQLAlchemy 模型插入資料
+            order = VoiceOrder(
+                drink_name=new_order['drink_name'],
+                size=new_order['size'],
+                ice_type=new_order['ice_type'],
+                sugar_type=new_order['sugar_type'],
+                order_date=new_order['order_date'],
+                order_time=new_order['order_time'],
+                weather_status=new_order['weather_status'],
+                temperature=new_order['temperature'],
+                phone_number=new_order['phone_number']
             )
-            db.session.add(new_order)
-        
+            db.session.add(order)
+            
         db.session.commit()
         print("訂單已儲存到資料庫")
-
+        
         return jsonify({
             'status': 'success',
             'message': '訂單已確認並儲存'
         })
+        
     except Exception as e:
-        db.session.rollback()
         print(f"儲存訂單時發生錯誤：{str(e)}")
+        db.session.rollback()
         return jsonify({
             'status': 'error',
-            'message': f'儲存訂單時發生錯誤: {str(e)}'
+            'message': str(e)
         })
 
 # 新增熱銷排行API
@@ -88,7 +141,7 @@ def get_monthly_top_drinks():
         # 從資料庫查詢熱銷飲品
         result = db.session.execute("""
             SELECT drink_name, COUNT(*) as count 
-            FROM voice_orders 
+            FROM orders 
             WHERE order_time >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
             GROUP BY drink_name 
             ORDER BY count DESC 
