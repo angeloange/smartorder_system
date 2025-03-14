@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTuber 語音對嘴系統</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>VTuber 語音對嘴系統</h1>
+    
+    <div class="container">
+        <div class="vtuber">
+            <img id="vtuber-img" src="{{ url_for('static', filename='vtuber_closed.png') }}" alt="VTuber">
+        </div>
+        <div class="control-panel">
+            <input type="text" id="text-input" placeholder="輸入要說的內容">
+            <button onclick="generateAudio()">生成語音</button>
+            <p id="subtitle"></p>
+            <audio id="audio-player" controls></audio>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
