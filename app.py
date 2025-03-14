@@ -91,30 +91,22 @@ def confirm_order():
         
         # 處理每個飲料訂單
         for order_item in data['order_details']:
-            # 將 ice 和 sugar 轉換為正確的格式
-            new_order = {
-                'drink_name': order_item['drink_name'],
-                'size': order_item.get('size', '小杯'),
-                'ice_type': order_item['ice'],
-                'sugar_type': order_item['sugar'],
-                'order_date': datetime.now().date(),
-                'order_time': datetime.now().time(),
-                'weather_status': WeatherStatus.CLOUDY.value,  # 使用 enum 值
-                'temperature': 20.00,
-                'phone_number': data.get('phone_number')
-            }
+            # 確保所有欄位都有正確的格式
+            ice_type = order_item['ice'].upper()
+            sugar_type = order_item['sugar'].upper()
+            size = order_item.get('size', '小杯')
             
-            # 使用 SQLAlchemy 模型插入資料
+            # 建立訂單
             order = VoiceOrder(
-                drink_name=new_order['drink_name'],
-                size=new_order['size'],
-                ice_type=new_order['ice_type'],
-                sugar_type=new_order['sugar_type'],
-                order_date=new_order['order_date'],
-                order_time=new_order['order_time'],
-                weather_status=new_order['weather_status'],
-                temperature=new_order['temperature'],
-                phone_number=new_order['phone_number']
+                drink_name=order_item['drink_name'],
+                size=Size.LARGE if size == '大杯' else Size.SMALL,
+                ice_type=IceType[ice_type] if ice_type in IceType.__members__ else IceType.ROOM_TEMP,
+                sugar_type=SugarType[sugar_type] if sugar_type in SugarType.__members__ else SugarType.HALF,
+                order_date=datetime.now().date(),
+                order_time=datetime.now().time(),
+                weather_status=WeatherStatus.CLOUDY,
+                temperature=20.00,
+                phone_number=data.get('phone_number')
             )
             db.session.add(order)
             

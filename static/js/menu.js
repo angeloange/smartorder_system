@@ -257,15 +257,47 @@ function displayOrder(orderDetails, speechText) {
     orderDetails.forEach(item => {
         const orderItem = document.createElement('div');
         orderItem.classList.add('order-item');
+        
+        // 格式化顯示
+        const sizeTxt = item.size || '中杯';
+        const quantity = item.quantity || 1;
+        const iceTxt = formatIceType(item.ice);
+        const sugarTxt = formatSugarType(item.sugar);
+        
         orderItem.innerHTML = `
-            <div class="item-name">${item.drink_name}(${item.size}) x${item.quantity}</div>
-            <div class="item-options">(${item.sugar}, ${item.ice})</div>
+            <div class="item-name">
+                ${item.drink_name}(${sizeTxt}) x${quantity}
+            </div>
+            <div class="item-options">
+                (${sugarTxt}, ${iceTxt})
+            </div>
         `;
         container.appendChild(orderItem);
     });
     
     document.getElementById('orderResult').classList.remove('hidden');
 }
+
+// 格式化冰塊選項
+function formatIceType(ice) {
+    const iceMap = {
+        'iced': '正常冰',
+        'hot': '熱飲',
+        'room_temp': '常溫'
+    };
+    return iceMap[ice] || ice;
+}
+
+// 格式化糖度選項
+function formatSugarType(sugar) {
+    const sugarMap = {
+        'full': '全糖',
+        'half': '半糖',
+        'free': '無糖'
+    };
+    return sugarMap[sugar] || sugar;
+}
+
 
 // 更新所有翻譯的函數
 function updateTranslations(lang) {
