@@ -1,0 +1,28 @@
+# Flask相關
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+
+# 資料庫
+SQLAlchemy==2.0.23
+PyMySQL==1.1.0
+
+# 語音處理
+SpeechRecognition==3.14.1
+pyaudio==0.2.14
+pydub==0.25.1
+soundfile==0.12.1
+numpy==1.26.2
+
+# API相關
+openai==1.3.5
+python-dotenv==1.0.0
+requests==2.31.0
+
+# 其他工具
+Werkzeug==3.0.1
+matplotlib==3.8.2
+seaborn==0.13.0
+
+
+#在 Mac 上安裝 pyaudio 可能需要先安裝 portaudio：
+#brew install portaudio
