@@ -12,6 +12,15 @@
     <div class="container">
         <!-- 左側面板 -->
         <div class="interaction-panel">
+            <div id="virtualAvatar" class="virtual-avatar hidden">
+                <!-- 這裡放置虛擬人物的容器 -->
+                <div class="avatar-container">
+                    <canvas id="avatarCanvas"></canvas>
+                </div>
+                <div class="speech-bubble hidden">
+                    <!-- 虛擬人物的對話框 -->
+                </div>
+            </div>
             <div class="panel-content">
                 <h2 data-translate="title">智慧點餐專員</h2>
                 
@@ -214,17 +223,9 @@
             </div>
             
             <!-- 右側底部資訊 -->
+            <!-- 修改右側底部資訊區域 -->
             <div class="bottom-info">
-                <div class="info-box">
-                    <h3>熱銷排行</h3>
-                    <div class="rank-list hot-sales">
-                        <!-- 由 JavaScript 動態填入 -->
-                    </div>
-                </div>
-                <div class="info-box">
-                    <h3>天氣推薦</h3>
-                    <div class="rank-list weather-recommend">
-                        <!-- 天氣推薦內容 -->
+                <div class=                    <h3>熱銷排行</h3>
                     </div>
                 </div>
             </div>
