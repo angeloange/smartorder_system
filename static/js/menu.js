@@ -74,16 +74,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
                 };
 
                 mediaRecorder.onstop = async () => {
-                    updateStatus('voice', 'processing');
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const formData = new FormData();
-                    formData.append('audio', audioBlob);
-
                     try {
+                        updateStatus('voice', 'processing');
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const formData = new FormData();
+                        formData.append('audio', audioBlob);
+
                         updateStatus('voice', 'analyzing');
                         const response = await fetch('/stop_recording', {
                             method: 'POST',
@@ -97,24 +99,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             currentOrderDetails = result.order_details;
                             currentSpeechText = result.speech_text;
                             displayOrder(result.order_details, result.speech_text);
+                        } else {
+                            throw new Error(result.message);
                         }
                     } catch (error) {
                         console.error('處理音訊時發生錯誤:', error);
+                        alert('處理音訊時發生錯誤，請稍後再試');
                     }
                 };
 
-                // 延遲開始錄音，給予使用者準備時間
+                // 開始錄音
+                mediaRecorder.start();
+                updateStatus('voice', 'recording');
+                
+                // 5秒後停止錄音
                 setTimeout(() => {
-                    mediaRecorder.start();
-                    updateStatus('voice', 'recording');
-                    
-                    setTimeout(() => {
-                        if (mediaRecorder.state === 'recording') {
-                            mediaRecorder.stop();
-                            stream.getTracks().forEach(track => track.stop());
-                        }
-                    }, 5000);
-                }, 1500);
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                }, 5000);
 
             } catch (error) {
                 console.error('錄音失敗:', error);

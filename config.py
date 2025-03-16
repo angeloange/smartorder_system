@@ -1,16 +1,6 @@
 import os
-from dotenv import load_dotenv
-
-# 載入 .env 檔案
-load_dotenv()
 
 class Config:
-    # 從環境變數讀取資料庫設定
-    DB_USER = os.getenv('DB_USER')
-    DB_PASSWORD = os.getenv('DB_PASSWORD')
-    DB_HOST = os.getenv('DB_HOST')
-    DB_NAME = os.getenv('DB_NAME')
-    
-    # 組合資料庫連線字串
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+    # AWS RDS MySQL 設定
+    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://user1:cAG2x14H6Pw74qW2#73FdhG1A4f#IRfaT1TFE1F2@my-database.cx2cm6iks409.ap-northeast-1.rds.amazonaws.com/beverage_db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False

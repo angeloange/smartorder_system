@@ -10,6 +10,9 @@ from enum import Enum
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
+import speech_recognition as sr
+from pydub import AudioSegment
+import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -18,7 +21,7 @@ app.config.from_object(Config)
 db = SQLAlchemy()
 db.init_app(app)
 
-# 初始化 OrderAnalyzer
+# 初始化訂單分析器
 analyzer = OrderAnalyzer()
 
 class Size(Enum):
@@ -50,7 +53,11 @@ class VoiceOrder(db.Model):
     ice_type = db.Column(db.Enum(IceType), nullable=False, default=IceType.ROOM_TEMP)
     sugar_type = db.Column(db.Enum(SugarType), nullable=False, default=SugarType.HALF)
     order_date = db.Column(db.Date, default=datetime.utcnow().date)
-    order_time = db.Column(db.Time, default=datetime.utcnow().time)
+    order_time = db.Column(
+        db.TIMESTAMP, 
+        server_default=db.func.current_timestamp(),
+        nullable=False
+    )
     weather_status = db.Column(db.Enum(WeatherStatus), nullable=False, default=WeatherStatus.CLOUDY)
     temperature = db.Column(db.Numeric(4,2), nullable=False, default=20.00)
     phone_number = db.Column(db.CHAR(10), nullable=True)
@@ -65,7 +72,7 @@ def analyze_text():
         data = request.get_json()
         text = data.get('text', '')
         
-        # 修改這裡：使用實例方法而不是類別方法
+        # 使用OrderAnalyzer進行分析
         order_details = analyzer.analyze_order(text)
         
         if isinstance(order_details, dict) and 'status' in order_details:
@@ -87,43 +94,37 @@ def analyze_text():
 def confirm_order():
     try:
         data = request.json
-        print(f"收到訂單資料：{data}")
+        current_time = datetime.now()  # 獲取當前時間
         
         # 處理每個飲料訂單
         for order_item in data['order_details']:
-            # 確保所有欄位都有正確的格式
-            ice_type = order_item['ice'].upper()
-            sugar_type = order_item['sugar'].upper()
-            size = order_item.get('size', '小杯')
-            
-            # 建立訂單
-            order = VoiceOrder(
+            new_order = VoiceOrder(
                 drink_name=order_item['drink_name'],
-                size=Size.LARGE if size == '大杯' else Size.SMALL,
-                ice_type=IceType[ice_type] if ice_type in IceType.__members__ else IceType.ROOM_TEMP,
-                sugar_type=SugarType[sugar_type] if sugar_type in SugarType.__members__ else SugarType.HALF,
-                order_date=datetime.now().date(),
-                order_time=datetime.now().time(),
-                weather_status=WeatherStatus.CLOUDY,
-                temperature=20.00,
+                size=order_item.get('size', '中杯'),
+                ice_type=order_item['ice'],
+                sugar_type=order_item['sugar'],
+                order_date=current_time.date(),    # 設置訂單日期
+                order_time=current_time,           # 設置訂單時間
                 phone_number=data.get('phone_number')
             )
-            db.session.add(order)
-            
-        db.session.commit()
-        print("訂單已儲存到資料庫")
+            db.session.add(new_order)
+            print(f"新增訂單: {order_item}, 時間: {current_time}")
         
+        db.session.commit()
+        print(f"已建立訂單記錄，時間: {current_time}")
+
         return jsonify({
             'status': 'success',
-            'message': '訂單已確認並儲存'
+            'message': '訂單已確認並儲存',
+            'timestamp': current_time.strftime('%Y-%m-%d %H:%M:%S')
         })
-        
+
     except Exception as e:
-        print(f"儲存訂單時發生錯誤：{str(e)}")
         db.session.rollback()
+        print(f"儲存訂單時發生錯誤：{str(e)}")
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': f'儲存訂單時發生錯誤: {str(e)}'
         })
 
 # 新增熱銷排行API
@@ -174,5 +175,66 @@ def synthesize_speech():
             'message': str(e)
         })
 
+# 確保臨時音訊檔案夾存在
+UPLOAD_FOLDER = 'temp_audio'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+@app.route('/stop_recording', methods=['POST'])
+def stop_recording():
+    try:
+        if 'audio' not in request.files:
+            return jsonify({
+                'status': 'error',
+                'message': '未收到音訊檔案'
+            }), 400
+
+        audio_file = request.files['audio']
+        
+        # 儲存並處理音訊檔案
+        temp_webm = os.path.join(UPLOAD_FOLDER, 'temp_audio.webm')
+        audio_file.save(temp_webm)
+
+        # 轉換為 WAV 格式
+        temp_wav = os.path.join(UPLOAD_FOLDER, 'temp_audio.wav')
+        audio = AudioSegment.from_file(temp_webm)
+        audio.export(temp_wav, format="wav")
+
+        # 進行語音辨識
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(temp_wav) as source:
+            audio_data = recognizer.record(source)
+            text = recognizer.recognize_google(audio_data, language='zh-TW')
+
+        print(f"辨識結果: {text}")  # 除錯用
+        
+        # 分析訂單
+        order_details = analyzer.analyze_order(text)
+        print(f"訂單分析: {order_details}")  # 除錯用
+
+        # 清理臨時檔案
+        if os.path.exists(temp_webm):
+            os.remove(temp_webm)
+        if os.path.exists(temp_wav):
+            os.remove(temp_wav)
+
+        return jsonify({
+            'status': 'success',
+            'speech_text': text,
+            'order_details': order_details
+        })
+
+    except sr.UnknownValueError:
+        return jsonify({
+            'status': 'error',
+            'message': '無法辨識語音內容'
+        })
+    except Exception as e:
+        print(f"錯誤: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'處理時發生錯誤: {str(e)}'
+        })
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5002)
+    app.run(debug=True, port=5005)
