@@ -2,7 +2,6 @@
 __pycache__/
 *.pyc
 .venv/
-__pycache__/
 *.pyc
 temp_audio/
 <<<<<<< Updated upstream
@@ -18,3 +17,5 @@ poetry.lock
 .DS_Store
 >>>>>>> Stashed changes
 >>>>>>> Stashed changes
+test*
+tempCodeRunnerFile.py
