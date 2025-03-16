@@ -1,10 +1,29 @@
-.env
-__pycache__/
+
+# IDE
+# Python
+# 專案特定
+# 環境設定
+# 系統檔案
+# 虛擬環境
+*.env
+*.log
+*.py[cod]
 *.pyc
-.venv/
-__pycache__/
-*.pyc
-temp_audio/
-instance/*.db
+*.so
+*.swo*.swp
+.DS_Store
 .DS_Store.env
+.Python
 .env
+.env.*
+.idea/
+.venv/
+.vscode/
+ENV/
+Thumbs.db
+__pycache__/
+instance/
+instance/*.db
+logs/
+temp_audio/
+venv/
