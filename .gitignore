@@ -1,7 +1,9 @@
-
 # IDE
 # Python
 # 專案特定
+shared/__pycache__/
+frontend/__pycache__/
+admin_backend/__pycache__/
 # 環境設定
 # 系統檔案
 # 虛擬環境
@@ -27,3 +29,8 @@ instance/*.db
 logs/
 temp_audio/
 venv/
+
+# 備份檔案
+project_backup_*/
+merge_gitignore.py
+restore_project.py
