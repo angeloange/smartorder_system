@@ -60,3 +60,6 @@ class DB:
         else:
             print("資料庫尚未連線")
             return None
+
+    def roll_back(self):
+        self.conn.rollback()
