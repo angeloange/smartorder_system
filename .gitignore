@@ -5,6 +5,16 @@ __pycache__/
 __pycache__/
 *.pyc
 temp_audio/
+<<<<<<< Updated upstream
 instance/*.db
+<<<<<<< Updated upstream
 .DS_Store.env
 .env
+=======
+.DS_Store
+=======
+pyproject.toml
+poetry.lock
+.DS_Store
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes

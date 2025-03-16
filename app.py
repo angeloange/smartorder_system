@@ -8,15 +8,18 @@ from datetime import datetime
 from config import Config
 from enum import Enum
 from flask import Flask
+
+from codes.db import DB, dbconfig
+from tools.tools import convert_order_date_for_db, get_now_time
+
+
+#--
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
 
 app = Flask(__name__)
-app.config.from_object(Config)
 
-# 重新初始化資料庫連線
-db = SQLAlchemy()
-db.init_app(app)
+db = DB(dbconfig())
 
 # 初始化 OrderAnalyzer
 analyzer = OrderAnalyzer()
@@ -41,19 +44,7 @@ class WeatherStatus(Enum):
     RAINY = 'rainy'
     STORMY = 'stormy'
 
-class VoiceOrder(db.Model):
-    __tablename__ = 'orders'  # 改用正確的資料表名稱
-    
-    order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    drink_name = db.Column(db.String(100), nullable=False)
-    size = db.Column(db.Enum(Size), nullable=False, default=Size.SMALL)
-    ice_type = db.Column(db.Enum(IceType), nullable=False, default=IceType.ROOM_TEMP)
-    sugar_type = db.Column(db.Enum(SugarType), nullable=False, default=SugarType.HALF)
-    order_date = db.Column(db.Date, default=datetime.utcnow().date)
-    order_time = db.Column(db.Time, default=datetime.utcnow().time)
-    weather_status = db.Column(db.Enum(WeatherStatus), nullable=False, default=WeatherStatus.CLOUDY)
-    temperature = db.Column(db.Numeric(4,2), nullable=False, default=20.00)
-    phone_number = db.Column(db.CHAR(10), nullable=True)
+
 
 @app.route('/')
 def index():
@@ -87,70 +78,97 @@ def analyze_text():
 def confirm_order():
     try:
         data = request.json
+        #{'order_details': [{'drink_name': '綠茶', 'ice': '微冰', 'quantity': 1, 'size': '小杯', 'sugar': '無糖'}], 'speech_text': '一杯小杯綠茶無糖微冰'}
         print(f"收到訂單資料：{data}")
-        
+
+        date, time = get_now_time()
+
         # 處理每個飲料訂單
         for order_item in data['order_details']:
             # 確保所有欄位都有正確的格式
-            ice_type = order_item['ice'].upper()
-            sugar_type = order_item['sugar'].upper()
-            size = order_item.get('size', '小杯')
-            
-            # 建立訂單
-            order = VoiceOrder(
-                drink_name=order_item['drink_name'],
-                size=Size.LARGE if size == '大杯' else Size.SMALL,
-                ice_type=IceType[ice_type] if ice_type in IceType.__members__ else IceType.ROOM_TEMP,
-                sugar_type=SugarType[sugar_type] if sugar_type in SugarType.__members__ else SugarType.HALF,
-                order_date=datetime.now().date(),
-                order_time=datetime.now().time(),
-                weather_status=WeatherStatus.CLOUDY,
-                temperature=20.00,
-                phone_number=data.get('phone_number')
-            )
-            db.session.add(order)
-            
-        db.session.commit()
+            ice_type = order_item['ice'].upper()             #???????????????
+            sugar_type = order_item['sugar'].upper()         #???????????????
+            size = order_item.get('size', '大杯')   #GPT可以當下處理？
+
+        orders_list = convert_order_date_for_db(orders_list=data['order_details'])
+
+           #天氣資訊待氣象API確認後才做連接#裝置及地點功能尚未設置
+        weather_status = 'sunny'
+        temperature = 22
+           #之前提到的裝置跟地點，之後看有沒有機會實現？ 目前先寫死
+        device_id = "IPHONE 101"
+        location_name = "台中店"
+           # 有設計電話儲存後再接進來
+        phone_number = None
+
+        orders_query = """
+             INSERT INTO orders (
+             drink_name, size, ice_type, sugar_type, order_date,
+             order_time, weather_status, temperature, phone_number)
+             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+             """
+
+        order_locations_query = """
+             INSERT INTO order_locations (
+             order_id, device_id, location_name)
+             VALUES (%s, %s, %s)
+             """
+
+        db.connect()
+        for drink in orders_list:
+            for q in range(drink['quantity']):
+                orders_data = (drink['drink_name'], drink['size'], drink['ice'],
+                        drink['sugar'], date, time, weather_status, temperature, phone_number)
+
+                db.execute(query=orders_query, data=orders_data)
+                order_id = db.cursor.lastrowid
+                print(f"新增訂單，order_id為: {order_id}")
+                order_locations_data = (order_id, device_id, location_name)
+                db.execute(query=order_locations_query, data=order_locations_data)
+                print(f"成功紀錄 訂單編號 {order_id} 的裝置及地點 至 order_locations 表格。")
+
+        db.disconnect()    
         print("訂單已儲存到資料庫")
         
         return jsonify({
-            'status': 'success',
-            'message': '訂單已確認並儲存'
-        })
-        
+             'status': 'success',
+             'message': '訂單已確認並儲存'
+             })
     except Exception as e:
-        print(f"儲存訂單時發生錯誤：{str(e)}")
-        db.session.rollback()
+        print(f'連線失敗: {e}')
+        db.roll_back()
+        db.disconnect()
         return jsonify({
-            'status': 'error',
-            'message': str(e)
-        })
+             'status': 'error',
+             'message': str(e)
+             })
 
-# 新增熱銷排行API
-@app.route('/monthly_top_drinks')
-def get_monthly_top_drinks():
-    try:
-        # 從資料庫查詢熱銷飲品
-        result = db.session.execute("""
-            SELECT drink_name, COUNT(*) as count 
-            FROM orders 
-            WHERE order_time >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
-            GROUP BY drink_name 
-            ORDER BY count DESC 
-            LIMIT 5
-        """)
+
+# # 新增熱銷排行API
+# @app.route('/monthly_top_drinks')
+# def get_monthly_top_drinks():
+#     try:
+#         # 從資料庫查詢熱銷飲品
+#         result = db.session.execute("""
+#             SELECT drink_name, COUNT(*) as count 
+#             FROM orders 
+#             WHERE order_time >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+#             GROUP BY drink_name 
+#             ORDER BY count DESC 
+#             LIMIT 5
+#         """)
         
-        top_drinks = [{'drink_name': row[0], 'count': row[1]} for row in result]
+#         top_drinks = [{'drink_name': row[0], 'count': row[1]} for row in result]
         
-        return jsonify({
-            'status': 'success',
-            'data': top_drinks
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        })
+#         return jsonify({
+#             'status': 'success',
+#             'data': top_drinks
+#         })
+#     except Exception as e:
+#         return jsonify({
+#             'status': 'error',
+#             'message': str(e)
+#         })
 
 @app.route('/synthesize_speech', methods=['POST'])
 def synthesize_speech():
