@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}系統設定{% endblock %}
+{% block page_title %}系統設定{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12 col-lg-6">
+            <!-- 個人資料設定 -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">個人資料設定</h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">帳號</label>
+                            <input type="text" class="form-control" id="username" value="{{ current_user.username }}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">姓名</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}">
+                        </div>
+                        <button type="submit" class="btn btn-primary">更新資料</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 密碼修改 -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">修改密碼</h5>
+                </div>
+                <div class="card-body">
+                    <form id="passwordForm">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">目前密碼</label>
+                            <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">新密碼</label>
+                            <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">確認新密碼</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">更新密碼</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <!-- 系統設定 -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">系統設定</h5>
+                </div>
+                <div class="card-body">
+                    <form id="systemSettingsForm">
+                        <div class="mb-3">
+                            <label class="form-label">營業時間</label>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <input type="time" class="form-control" name="opening_time" value="{{ settings.opening_time }}">
+                                </div>
+                                <div class="col-6">
+                                    <input type="time" class="form-control" name="closing_time" value="{{ settings.closing_time }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">休息日</label>
+                            <div class="row g-3">
+                                {% for day in ['週一', '週二', '週三', '週四', '週五', '週六', '週日'] %}
+                                <div class="col-auto">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="closed_days" 
+                                               value="{{ loop.index0 }}"
+                                               {{ 'checked' if loop.index0 in settings.closed_days }}>
+                                        <label class="form-check-label">{{ day }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">儲存設定</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 備份設定 -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">資料備份</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">上次備份時間：{{ last_backup_time }}</p>
+                    <button type="button" class="btn btn-primary" id="backupButton">
+                        <i class="bx bx-download"></i> 立即備份
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 個人資料更新
+    document.getElementById('profileForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(Object.fromEntries(formData))
+            });
+            
+            if (!response.ok) throw new Error('更新失敗');
+            
+            alert('資料已更新');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('更新失敗，請稍後再試');
+        }
+    });
+
+    // 密碼更新
+    document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (this.newPassword.value !== this.confirmPassword.value) {
+            alert('新密碼與確認密碼不符');
+            return;
+        }
+        
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(Object.fromEntries(formData))
+            });
+            
+            if (!response.ok) throw new Error('更新失敗');
+            
+            alert('密碼已更新');
+            this.reset();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('更新失敗，請稍後再試');
+        }
+    });
+
+    // 系統設定更新
+    document.getElementById('systemSettingsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const closedDays = [...formData.getAll('closed_days')].map(Number);
+        
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    opening_time: formData.get('opening_time'),
+                    closing_time: formData.get('closing_time'),
+                    closed_days: closedDays
+                })
+            });
+            
+            if (!response.ok) throw new Error('更新失敗');
+            
+            alert('設定已更新');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('更新失敗，請稍後再試');
+        }
+    });
+
+    // 資料備份
+    document.getElementById('backupButton').addEventListener('click', async function() {
+        try {
+            const response = await fetch('/api/backup', {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error('備份失敗');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-${new Date().toISOString().slice(0, 10)}.sql`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('備份失敗，請稍後再試');
+        }
+    });
+});
+</script>
+{% endblock %}

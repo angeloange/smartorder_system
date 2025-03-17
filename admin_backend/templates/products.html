@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}產品管理{% endblock %}
+{% block page_title %}產品管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- 新增產品按鈕 -->
+    <div class="row mb-4">
+        <div class="col">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productModal">
+                <i class="bx bx-plus"></i> 新增產品
+            </button>
+        </div>
+    </div>
+
+    <!-- 產品列表 -->
+    <div class="row g-4">
+        {% for product in products %}
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text text-muted">{{ product.description }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h5 mb-0">NT$ {{ "%.0f"|format(product.price) }}</span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input product-status-toggle" 
+                                   type="checkbox" 
+                                   id="status-{{ product.id }}"
+                                   data-product-id="{{ product.id }}"
+                                   {{ 'checked' if product.is_available }}>
+                            <label class="form-check-label" for="status-{{ product.id }}">
+                                {{ '販售中' if product.is_available else '已下架' }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <button class="btn btn-outline-primary btn-sm edit-product"
+                            data-product-id="{{ product.id }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#productModal">
+                        編輯
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm delete-product"
+                            data-product-id="{{ product.id }}">
+                        刪除
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 產品編輯模態框 -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯產品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <input type="hidden" id="productId" name="id">
+                    <div class="mb-3">
+                        <label for="productName" class="form-label">產品名稱</label>
+                        <input type="text" class="form-control" id="productName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productPrice" class="form-label">價格</label>
+                        <input type="number" class="form-control" id="productPrice" name="price" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productDescription" class="form-label">描述</label>
+                        <textarea class="form-control" id="productDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productImage" class="form-label">產品圖片</label>
+                        <input type="file" class="form-control" id="productImage" name="image">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveProduct">儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 產品狀態切換
+    document.querySelectorAll('.product-status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const productId = this.dataset.productId;
+            const isAvailable = this.checked;
+            
+            try {
+                const response = await fetch(`/api/products/${productId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ is_available: isAvailable })
+                });
+                
+                if (!response.ok) throw new Error('更新失敗');
+                
+                const label = this.nextElementSibling;
+                label.textContent = isAvailable ? '販售中' : '已下架';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('更新失敗，請稍後再試');
+                this.checked = !this.checked;
+            }
+        });
+    });
+
+    // 產品編輯
+    document.querySelectorAll('.edit-product').forEach(button => {
+        button.addEventListener('click', async function() {
+            const productId = this.dataset.productId;
+            try {
+                const response = await fetch(`/api/products/${productId}`);
+                const product = await response.json();
+                
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productPrice').value = product.price;
+                document.getElementById('productDescription').value = product.description;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('載入產品資料失敗');
+            }
+        });
+    });
+
+    // 儲存產品
+    document.getElementById('saveProduct').addEventListener('click', async function() {
+        const form = document.getElementById('productForm');
+        const formData = new FormData(form);
+        const productId = formData.get('id');
+        
+        try {
+            const response = await fetch(`/api/products/${productId || ''}`, {
+                method: productId ? 'PUT' : 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) throw new Error('儲存失敗');
+            
+            location.reload();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('儲存失敗，請稍後再試');
+        }
+    });
+
+    // 刪除產品
+    document.querySelectorAll('.delete-product').forEach(button => {
+        button.addEventListener('click', async function() {
+            if (!confirm('確定要刪除此產品嗎？')) return;
+            
+            const productId = this.dataset.productId;
+            try {
+                const response = await fetch(`/api/products/${productId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) throw new Error('刪除失敗');
+                
+                location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('刪除失敗，請稍後再試');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

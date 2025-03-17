@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}數據分析{% endblock %}
+{% block page_title %}數據分析{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- 時間範圍選擇器 -->
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h4 class="mb-0">數據分析</h4>
+        </div>
+        <div class="col-auto">
+            <select class="form-select" id="dateRange">
+                <option value="today" {% if range == 'today' %}selected{% endif %}>今日</option>
+                <option value="week" {% if range == 'week' %}selected{% endif %}>本週</option>
+                <option value="month" {% if range == 'month' %}selected{% endif %}>本月</option>
+                <option value="year" {% if range == 'year' %}selected{% endif %}>今年</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 統計卡片 -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">總訂單數</h6>
+                    <h2 class="card-title mb-0">{{ stats.total_orders }}</h2>
+                    <div class="small text-success">
+                        <i class="bx bx-up-arrow-alt"></i> {{ stats.order_growth }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">總銷售額</h6>
+                    <h2 class="card-title mb-0">NT$ {{ stats.total_revenue }}</h2>
+                    <div class="small text-success">
+                        <i class="bx bx-up-arrow-alt"></i> {{ stats.revenue_growth }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 圖表區域 -->
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">銷售趨勢</h5>
+                    <canvas id="salesChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">熱門商品</h5>
+                    <canvas id="productsChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 詳細數據表格 -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body">
+            <h5 class="card-title">詳細銷售數據</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>商品名稱</th>
+                            <th>銷售數量</th>
+                            <th>銷售額</th>
+                            <th>佔比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in sales_data %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>NT$ {{ item.revenue }}</td>
+                            <td>{{ item.percentage }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 銷售趨勢圖
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.labels|tojson|safe }},
+            datasets: [{
+                label: '銷售額',
+                data: {{ chart_data.sales|tojson|safe }},
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // 熱門商品圖
+    const productsCtx = document.getElementById('productsChart').getContext('2d');
+    new Chart(productsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ top_products.labels|tojson|safe }},
+            datasets: [{
+                data: {{ top_products.data|tojson|safe }},
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc',
+                    '#f6c23e', '#e74a3b'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // 日期範圍切換
+    document.getElementById('dateRange').addEventListener('change', function() {
+        window.location.href = "{{ url_for('analytics') }}?range=" + this.value;
+    });
+});
+</script>
+{% endblock %}

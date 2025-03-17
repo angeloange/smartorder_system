@@ -1,36 +1,34 @@
 from app import app, db
-from models import Admin, Product
-from werkzeug.security import generate_password_hash
+from models import Admin
+from sqlalchemy import text
 
-def init_database():
+def init_db():
     with app.app_context():
-        # 建立資料表
+        # 先關閉外鍵檢查
+        db.session.execute(text('SET FOREIGN_KEY_CHECKS=0;'))
+        
+        # 刪除所有現有的資料表
+        db.drop_all()
+        
+        # 建立新的資料表
         db.create_all()
         
-        # 建立預設管理員
+        # 重新開啟外鍵檢查
+        db.session.execute(text('SET FOREIGN_KEY_CHECKS=1;'))
+        
+        # 建立預設管理員帳號
         if not Admin.query.filter_by(username='admin').first():
             admin = Admin(
                 username='admin',
-                password_hash=generate_password_hash('admin123'),
                 name='系統管理員',
                 email='admin@example.com',
-                role='admin'
+                role='admin',
+                is_active=True
             )
+            admin.set_password('admin123')
             db.session.add(admin)
-            
-        # 建立一些測試產品
-        sample_products = [
-            {'name': '綠茶', 'price': 30, 'category': 'tea'},
-            {'name': '紅茶', 'price': 30, 'category': 'tea'},
-            {'name': '奶茶', 'price': 45, 'category': 'milk_tea'},
-        ]
-        
-        for product in sample_products:
-            if not Product.query.filter_by(name=product['name']).first():
-                new_product = Product(**product)
-                db.session.add(new_product)
-        
-        db.session.commit()
+            db.session.commit()
+            print('已建立預設管理員帳號')
 
 if __name__ == '__main__':
-    init_database()
+    init_db()

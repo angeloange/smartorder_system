@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}訂單管理{% endblock %}
+{% block page_title %}訂單管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- 訂單狀態過濾器 -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('orders', status='all') }}" 
+                   class="btn btn-{{ 'primary' if current_status == 'all' else 'outline-primary' }}">
+                    全部
+                </a>
+                <a href="{{ url_for('orders', status='pending') }}"
+                   class="btn btn-{{ 'warning' if current_status == 'pending' else 'outline-warning' }}">
+                    待處理
+                </a>
+                <a href="{{ url_for('orders', status='processing') }}"
+                   class="btn btn-{{ 'info' if current_status == 'processing' else 'outline-info' }}">
+                    製作中
+                </a>
+                <a href="{{ url_for('orders', status='completed') }}"
+                   class="btn btn-{{ 'success' if current_status == 'completed' else 'outline-success' }}">
+                    已完成
+                </a>
+                <a href="{{ url_for('orders', status='cancelled') }}"
+                   class="btn btn-{{ 'danger' if current_status == 'cancelled' else 'outline-danger' }}">
+                    已取消
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 訂單列表 -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>訂單編號</th>
+                            <th>飲品名稱</th>
+                            <th>規格</th>
+                            <th>訂購時間</th>
+                            <th>狀態</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders.items %}
+                        <tr>
+                            <td>{{ order.order_id }}</td>
+                            <td>{{ order.drink_name }}</td>
+                            <td>
+                                {{ order.size }} / 
+                                {% if order.ice_type == 'hot' %}熱飲
+                                {% elif order.ice_type == 'iced' %}正常冰
+                                {% else %}常溫{% endif %} / 
+                                {% if order.sugar_type == 'full' %}全糖
+                                {% elif order.sugar_type == 'half' %}半糖
+                                {% else %}無糖{% endif %}
+                            </td>
+                            <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{{ order.status_color }}">
+                                    {{ order.status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if order.status.value == 'pending' %}
+                                <button class="btn btn-sm btn-info status-update-btn"
+                                        data-order-id="{{ order.order_id }}"
+                                        data-status="processing">
+                                    開始製作
+                                </button>
+                                {% elif order.status.value == 'processing' %}
+                                <button class="btn btn-sm btn-success status-update-btn"
+                                        data-order-id="{{ order.order_id }}"
+                                        data-status="completed">
+                                    完成訂單
+                                </button>
+                                {% endif %}
+                                {% if order.status.value != 'cancelled' and order.status.value != 'completed' %}
+                                <button class="btn btn-sm btn-danger status-update-btn"
+                                        data-order-id="{{ order.order_id }}"
+                                        data-status="cancelled">
+                                    取消訂單
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分頁 -->
+    {% if orders.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {{ 'disabled' if not orders.has_prev }}">
+                <a class="page-link" href="{{ url_for('orders', page=orders.prev_num, status=current_status) }}">上一頁</a>
+            </li>
+            {% for page in orders.iter_pages() %}
+                {% if page %}
+                    <li class="page-item {{ 'active' if page == orders.page }}">
+                        <a class="page-link" href="{{ url_for('orders', page=page, status=current_status) }}">{{ page }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {{ 'disabled' if not orders.has_next }}">
+                <a class="page-link" href="{{ url_for('orders', page=orders.next_num, status=current_status) }}">下一頁</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

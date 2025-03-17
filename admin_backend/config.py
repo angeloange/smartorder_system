@@ -1,6 +1,13 @@
-import os
+from os import environ
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
-    # AWS RDS MySQL 設定
-    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://user1:cAG2x14H6Pw74qW2#73FdhG1A4f#IRfaT1TFE1F2@my-database.cx2cm6iks409.ap-northeast-1.rds.amazonaws.com/beverage_db"
+    SECRET_KEY = environ.get('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = (
+        f"mysql+pymysql://{environ.get('DB_USER')}:{environ.get('DB_PASSWORD')}@"
+        f"{environ.get('DB_HOST')}:{environ.get('DB_PORT')}/{environ.get('DB_NAME')}"
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    JSON_AS_ASCII = False

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}登入 - 飲料店後台管理系統{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="login-box">
+                <h2 class="text-center mb-4">
+                    <i class='bx bx-coffee'></i>
+                    飲料店後台管理
+                </h2>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">帳號</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密碼</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">登入</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
