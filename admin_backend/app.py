@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from models import db, Admin, Order, OrderStatus
+from .models import db, Admin, Order, OrderStatus  # 修改為相對導入
 from config import Config
 from datetime import datetime, timedelta
 import pandas as pd

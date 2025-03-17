@@ -9,7 +9,7 @@ from pydub import AudioSegment
 
 from codes.db import DB, dbconfig
 from tools.tools import convert_order_date_for_db, get_now_time
-from order_analyzer import OrderAnalyzer
+from .order_analyzer import OrderAnalyzer
 
 # 初始化 Flask 應用
 app = Flask(__name__)
