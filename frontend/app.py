@@ -187,4 +187,4 @@ def confirm_order():
             'message': '儲存訂單失敗'
         })
 if __name__ == '__main__':
-    app.run(debug=True, port=5005)
+    app.run(debug=True)
