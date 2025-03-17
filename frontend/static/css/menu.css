@@ -1,0 +1,369 @@
+:root {
+    --main-width: 1194px;
+    --main-height: 834px;
+    --panel-width: 479px;
+    --panel-height: 650px;
+    --primary-color: #2A363B;
+    --secondary-color: #99B898;
+    --background-color: #F7F7F7;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: var(--background-color);
+    font-family: 'Noto Sans TC', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: var(--main-width);
+    height: var(--main-height);
+    background: white;
+    border-radius: 30px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-between;
+    padding: 40px;
+    gap: 36px;
+    box-sizing: border-box;
+}
+
+.interaction-panel {
+    width: var(--panel-width);
+    height: var(--panel-height);
+    background: white;
+    border: 1px solid #E5E5E5;
+    border-radius: 20px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-panel {
+    width: var(--panel-width);
+    height: var(--panel-height);
+    background: white;
+    border: 1px solid #E5E5E5;
+    border-radius: 20px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    padding-top: 30;
+}
+
+.menu-section h2 {
+    margin: 0;  /* 移除 h2 的所有邊距 */
+    padding: 0px 0;  /* 加入適當的上下內距 */
+    padding-bottom: 8px;
+    color: var(--primary-color);
+    font-size: 1.2em;
+    text-align: center;
+}
+
+
+.panel-content {
+    flex: 1;
+    overflow-y: auto;
+    height: 487px;
+}
+
+/* 修改菜單網格布局 */
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 改為3欄 */
+    gap: 15px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    max-height: calc(var(--panel-height) - 200px); /* 預留底部空間 */
+    overflow-y: auto;
+}
+
+.category {
+    background: var(--background-color);
+    padding: 12px;
+    border-radius: 12px;
+    height: fit-content;
+}
+
+.category.full-width {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+}
+
+.category h3 {
+    color: var(--primary-color);
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+}
+
+.items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: white;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+/* 修改底部資訊區塊 */
+.bottom-info {
+    display: flex;
+    gap: 20px;
+    margin-top: auto; /* 推到底部 */
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.info-box {
+    flex: 1;
+    background: var(--background-color);
+    padding: 15px;
+    border-radius: 12px;
+    height: 120px; /* 固定高度 */
+}
+
+.info-box h3 {
+    margin: 0 0 10px 0;
+    font-size: 1em;
+    color: var(--primary-color);
+}
+
+.number-display {
+    font-size: 2em;
+    color: var(--secondary-color);
+    text-align: center;
+    margin: 10px 0;
+}
+
+.info-text {
+    text-align: center;
+    font-size: 0.9em;
+}
+
+.rank-list {
+    margin-top: 8px;
+    font-size: 0.9em;
+    max-height: 80px; /* 限制高度 */
+    overflow-y: auto;
+}
+
+.rank-item {
+    padding: 3px 0;
+    font-size: 0.85em;
+}
+
+.order-input-section {
+    margin: 20px 0;
+}
+
+.order-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    margin-bottom: 10px;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background: var(--secondary-color);
+}
+
+.order-prompt {
+    text-align: center;
+    padding: 20px;
+    margin: 15px 0;
+    background: var(--background-color);
+    border-radius: 8px;
+    color: var(--primary-color);
+}
+
+.order-details {
+    margin: 15px 0;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-confirm, .btn-cancel {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.btn-confirm {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-cancel {
+    background: #dc3545;
+    color: white;
+}
+
+.hidden {
+    display: none;
+}
+
+.input-mode-switch {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.mode-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+#voiceInputMode {
+    text-align: center;
+    padding: 20px;
+    background: var(--background-color);
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.order-prompt {
+    text-align: center;
+    padding: 20px;
+    margin: 15px 0;
+    background: var(--background-color);
+    border-radius: 8px;
+}
+
+.status-message {
+    padding: 10px;
+    font-size: 1.1em;
+    color: var(--primary-color);
+}
+
+.status-message.recording {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.status-message.processing {
+    color: #0d6efd;
+}
+
+.hidden {
+    display: none;
+}
+
+.bottom-language-switch {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 96px;  /* 保持寬度不變 */
+    height: 32px;
+}
+
+.toggle-input {
+    display: none;
+}
+
+.toggle-label {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;  /* 移除 padding */
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-label:before {
+    content: '';
+    position: absolute;
+    width: 48px;  /* 調整滑塊寬度 */
+    height: 26px;
+    border-radius: 13px;
+    background-color: white;
+    left: 2px;    /* 調整左邊距 */
+    transform: translateX(0);
+    transition: 0.3s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-input:checked + .toggle-label:before {
+    transform: translateX(44px);  /* 調整移動距離，使右邊距也是 2px */
+}
+
+.toggle-text-zh,
+.toggle-text-en {
+    color: var(--primary-color);
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 1;
+    transition: color 0.3s;
+    width: 44px;
+    text-align: center;
+    position: relative;
+}
+
+.toggle-text-zh {
+    margin-left: 3px;
+}
+
+.toggle-text-en {
+    margin-right: 3px;
+}
+
+/* 當目前是英文模式時，中文文字顯示為白色 */
+.toggle-input:checked + .toggle-label .toggle-text-zh {
+    color: white;
+}
+
+/* 當目前是中文模式時，英文文字顯示為白色 */
+.toggle-input:not(:checked) + .toggle-label .toggle-text-en {
+    color: white;
+}

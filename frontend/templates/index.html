@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title data-translate="pageTitle">智慧點餐系統</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
+    <script src="{{ url_for('static', filename='js/languages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 左側面板 -->
+        <div class="interaction-panel">
+            <div id="virtualAvatar" class="virtual-avatar hidden">
+                <!-- 這裡放置虛擬人物的容器 -->
+                <div class="avatar-container">
+                    <canvas id="avatarCanvas"></canvas>
+                </div>
+                <div class="speech-bubble hidden">
+                    <!-- 虛擬人物的對話框 -->
+                </div>
+            </div>
+            <div class="panel-content">
+                <h2 data-translate="title">智慧點餐專員</h2>
+                
+                <!-- 在點餐輸入區域修改 -->
+                <div class="order-input-section">
+                    <div class="input-mode-switch">
+                        <button id="textModeBtn" class="mode-btn active">文字輸入</button>
+                        <button id="voiceModeBtn" class="mode-btn">語音輸入</button>
+                    </div>
+                    <div id="orderPrompt" class="order-prompt hidden">
+                        <div class="status-message preparing hidden">請稍候，正在準備錄音...</div>
+                        <div class="status-message recording hidden">請開始點餐（5秒）</div>
+                        <div class="status-message processing hidden">正在處理語音辨識...</div>
+                        <div class="status-message analyzing hidden">正在分析您的訂單...</div>
+                    </div>
+                    <!-- 文字輸入模式 -->
+                    <div id="textInputMode">
+                        <input type="text" id="orderInput" class="order-input" 
+                            data-translate="placeholder" placeholder="例：我要一杯大杯冰綠茶，全糖微冰" />
+                    </div>
+                    
+                    <!-- 語音輸入模式 -->
+                    <div id="voiceInputMode" class="hidden">
+                        <div class="voice-status">按下開始點餐進行錄音</div>
+                    </div>
+                    
+                    <button id="startOrder" class="btn-primary" data-translate="startOrder">開始點餐</button>
+                </div>
+
+                <!-- 訂單處理提示 -->
+                <div id="orderPrompt" class="order-prompt hidden">
+                    <p data-translate="processing">正在處理您的訂單...</p>
+                </div>
+
+                <!-- 訂單確認區域 -->
+                <div id="orderResult" class="order-result hidden">
+                    <div id="orderDetails" class="order-details"></div>
+                    <div class="button-group">
+                        <button id="confirmOrder" class="btn-confirm" data-translate="confirm">確認訂單</button>
+                        <button id="cancelOrder" class="btn-cancel" data-translate="cancel">取消</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 左側底部的兩個框框 -->
+            <div class="bottom-info">
+                <div class="info-box">
+                    <h3 data-translate="orderNumber">目前取餐號碼</h3>
+                    <div class="number-display">A12</div>
+                    <div class="info-text" data-translate="pleaseWait">請保持關注叫號</div>
+                </div>
+                <div class="info-box">
+                    <h3 data-translate="waitingInfo">等候資訊</h3>
+                    <div class="number-display">5</div>
+                    <div class="info-text" data-translate="estimatedTime">預計等待 8 分鐘</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側面板 -->
+        <div class="menu-panel">
+            <div class="panel-content">
+                <div class="menu-section">
+                    <h2>飲品菜單</h2>
+                    <div class="menu-grid">
+                        <!-- 茶飲區 -->
+                        <div class="category" data-category="tea">
+                            <h3 data-translate="teaSection">茶飲</h3>
+                            <div class="items">
+                                <div class="item" data-drink-key="oolongTea">
+                                    <span class="name">烏龍茶</span>
+                                    <span class="price" data-price="40">40元</span>
+                                </div>
+                                <div class="item" data-drink-key="blackTea">
+                                    <span class="name">紅茶</span>
+                                    <span class="price" data-price="40">40元</span>
+                                </div>
+                                <div class="item" data-drink-key="greenTea">
+                                    <span class="name">綠茶</span>
+                                    <span class="price" data-price="40">40元</span>
+                                </div>
+                                <div class="item" data-drink-key="lemonTea">
+                                    <span class="name">檸檬茶</span>
+                                    <span class="price" data-price="45">45元</span>
+                                </div>
+                                <div class="item" data-drink-key="honeyLemon">
+                                    <span class="name">蜂蜜檸檬</span>
+                                    <span class="price" data-price="45">45元</span>
+                                </div>
+                                <div class="item" data-drink-key="wintermelonTea">
+                                    <span class="name">冬瓜茶</span>
+                                    <span class="price" data-price="40">40元</span>
+                                </div>
+                                <div class="item" data-drink-key="plumGreenTea">
+                                    <span class="name">梅子綠茶</span>
+                                    <span class="price" data-price="45">45元</span>
+                                </div>
+                                <div class="item" data-drink-key="wintermelonLemon">
+                                    <span class="name">冬瓜檸檬</span>
+                                    <span class="price" data-price="45">45元</span>
+                                </div>
+                                <div class="item" data-drink-key="puerhTea">
+                                    <span class="name">普洱茶</span>
+                                    <span class="price" data-price="40">40元</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 奶茶區 -->
+                        <div class="category" data-category="milkTea">
+                            <h3 data-translate="milkTeaSection">奶茶</h3>
+                            <div class="items">
+                                <div class="item" data-drink-key="plainMilkTea">
+                                    <span class="name">奶茶</span>
+                                    <span class="price" data-price="45">45元</span>
+                                </div>
+                                <div class="item" data-drink-key="milkGreenTea">
+                                    <span class="name">奶綠</span>
+                                    <span class="price" data-price="45">45元</span>
+                                </div>
+                                <div class="item" data-drink-key="oolongMilkTea">
+                                    <span class="name">烏龍奶茶</span>
+                                    <span class="price" data-price="45">45元</span>
+                                </div>
+                                <div class="item" data-drink-key="caramelMilkTea">
+                                    <span class="name">焦糖奶茶</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                                <div class="item" data-drink-key="pearlMilkTea">
+                                    <span class="name">波霸奶茶</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                                <div class="item" data-drink-key="coconutMilkTea">
+                                    <span class="name">椰果奶茶</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                                <div class="item" data-drink-key="honeyMilkTea">
+                                    <span class="name">蜂蜜奶茶</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                                <div class="item" data-drink-key="grassJellyMilkTea">
+                                    <span class="name">仙草奶茶</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                                <div class="item" data-drink-key="puddingMilkTea">
+                                    <span class="name">布丁奶茶</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                                <div class="item" data-drink-key="chocolateMilk">
+                                    <span class="name">巧克力牛奶</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 咖啡區 -->
+                        <div class="category" data-category="coffee">
+                            <h3 data-translate="coffeeSection">咖啡</h3>
+                            <div class="items">
+                                <div class="item" data-drink-key="americano">
+                                    <span class="name">美式咖啡</span>
+                                    <span class="price" data-price="50">50元</span>
+                                </div>
+                                <div class="item" data-drink-key="honeyAmericano">
+                                    <span class="name">蜂蜜美式</span>
+                                    <span class="price" data-price="55">55元</span>
+                                </div>
+                                <div class="item" data-drink-key="cappuccino">
+                                    <span class="name">卡布奇諾</span>
+                                    <span class="price" data-price="60">60元</span>
+                                </div>
+                                <div class="item" data-drink-key="caramelMacchiato">
+                                    <span class="name">焦糖瑪奇朵</span>
+                                    <span class="price" data-price="65">65元</span>
+                                </div>
+                                <div class="item" data-drink-key="latteCoffee">
+                                    <span class="name">拿鐵咖啡</span>
+                                    <span class="price" data-price="60">60元</span>
+                                </div>
+                                <div class="item" data-drink-key="mochaCoffee">
+                                    <span class="name">摩卡咖啡</span>
+                                    <span class="price" data-price="65">65元</span>
+                                </div>
+                                <div class="item" data-drink-key="oolongLatte">
+                                    <span class="name">烏龍拿鐵</span>
+                                    <span class="price" data-price="65">65元</span>
+                                </div>
+                                <div class="item" data-drink-key="blackTeaCoffee">
+                                    <span class="name">紅茶咖啡</span>
+                                    <span class="price" data-price="60">60元</span>
+                                </div>
+                                <div class="item" data-drink-key="milkCoffee">
+                                    <span class="name">牛奶咖啡</span>
+                                    <span class="price" data-price="60">60元</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右側底部資訊 -->
+            <!-- 修改右側底部資訊區域 -->
+            <div class="bottom-info">
+                <div class=                    <h3>熱銷排行</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增底部的語言切換按鈕 -->
+    <div class="bottom-language-switch">
+        <div class="toggle-switch">
+            <input type="checkbox" id="langToggle" class="toggle-input">
+            <label for="langToggle" class="toggle-label">
+                <span class="toggle-text-zh">中文</span>
+                <span class="toggle-text-en">EN</span>
+            </label>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+</body>
+</html>

@@ -16,12 +16,11 @@ def dbconfig() -> DBUser:
          )
 
 class DB:
-    def __init__(self, account: DBUser):
-        self.host = account.host
-        self.port = account.port
-        self.user = account.user
-        self.password = account.password
-        self.database = account.database
+    def __init__(self, config):
+        self.host = config['host']
+        self.user = config['user']
+        self.password = config['password']
+        self.database = config['db']
         self.conn = None
         self.cursor = None
 
@@ -29,37 +28,56 @@ class DB:
         try:
             self.conn = mysql.connector.connect(
                 host=self.host,
-                port=self.port,
                 user=self.user,
                 password=self.password,
                 database=self.database
             )
-            if self.conn.is_connected():
-                    print(f"資料庫: {self.database} 連線成功")
-                    self.cursor = self.conn.cursor()
-        except Error as e:
-            print(f"資料庫錯誤: {e}")
-            self.conn = None
-            self.cursor = None
+            self.cursor = self.conn.cursor(dictionary=True)
+            print(f'資料庫: {self.database} 連線成功')
+            return True
+        except mysql.connector.Error as err:
+            print(f'資料庫連線失敗: {err}')
+            return False
 
-    def disconnect(self):
-        if self.conn and self.conn.is_connected():
-            self.cursor.close()
-            self.conn.close()
-            print('資料庫關閉連線')
-
-    def execute(self, query: str, data: tuple = None):
-        if self.conn and self.cursor:
-            try:
+    def execute(self, query, data=None):
+        try:
+            if data:
                 self.cursor.execute(query, data)
-                self.conn.commit()
-                return self.cursor.fetchall()  # 如果是查詢資料會返回結果
-            except Exception as e:
-                print(f"execute錯誤: {e}")
-                return None
-        else:
-            print("資料庫尚未連線")
+            else:
+                self.cursor.execute(query)
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f'execute錯誤: {e}')
+            self.conn.rollback()
+            return False
+
+    def fetchall(self):
+        try:
+            return self.cursor.fetchall()
+        except Exception as e:
+            print(f'fetchall錯誤: {e}')
             return None
 
-    def roll_back(self):
-        self.conn.rollback()
+    def fetchone(self):
+        try:
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f'fetchone錯誤: {e}')
+            return None
+
+    def disconnect(self):
+        try:
+            if self.cursor:
+                self.cursor.close()
+                self.cursor = None
+            
+            if self.conn:
+                self.conn.close()
+                self.conn = None
+                
+            print('資料庫關閉連線')
+            return True
+        except Exception as e:
+            print(f'資料庫關閉連線失敗: {e}')
+            return False

@@ -1,0 +1,277 @@
+:root {
+    /* Canva 風格的現代配色 */
+    --primary: #4361EE;     /* 主色調：現代藍 */
+    --secondary: #3F37C9;   /* 次要色：深紫藍 */
+    --success: #4CAF50;     /* 成功綠 */
+    --warning: #FF9800;     /* 警告橙 */
+    --danger: #F72585;      /* 錯誤粉 */
+    --info: #4CC9F0;        /* 信息藍 */
+    --light: #F8F9FA;       /* 背景色 */
+    --dark: #212529;        /* 文字色 */
+    --gray-100: #F8F9FA;
+    --gray-200: #E9ECEF;
+    --gray-300: #DEE2E6;
+    --gray-400: #CED4DA;
+    --gray-500: #ADB5BD;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+    background-color: var(--gray-100);
+    color: var(--dark);
+    line-height: 1.6;
+}
+
+.wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+/* 側邊欄樣式 */
+#sidebar {
+    background: white;
+    min-width: 250px;
+    max-width: 250px;
+    transition: all 0.35s ease-in-out;
+    border-right: 1px solid var(--gray-200);
+    padding: 1.5rem 0;
+}
+
+#sidebar.active {
+    margin-left: -250px;
+}
+
+#sidebar .sidebar-header {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+#sidebar ul.components {
+    padding: 1rem 0;
+}
+
+#sidebar ul li a {
+    padding: 1rem 1.5rem;
+    font-size: 0.95rem;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0 2rem 2rem 0;
+    margin: 0.25rem 0;
+    margin-right: 1rem;
+    transition: all 0.3s ease;
+}
+
+#sidebar ul li a:hover {
+    background: var(--gray-100);
+    color: var(--primary);
+}
+
+#sidebar ul li.active > a {
+    background: var(--primary);
+    color: white;
+}
+
+#content {
+    width: 100%;
+    padding: 20px;
+    min-height: 100vh;
+    transition: all 0.3s;
+}
+
+/* 卡片樣式 */
+.card {
+    background: white;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 1.5rem;
+}
+
+.stats-card {
+    padding: 1.5rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, white, var(--gray-100));
+    border-left: 4px solid var(--primary);
+}
+
+.stats-card.success {
+    border-left-color: var(--success);
+}
+
+.stats-card.warning {
+    border-left-color: var(--warning);
+}
+
+.stats-card.danger {
+    border-left-color: var(--danger);
+}
+
+.stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    background: var(--gray-100);
+}
+
+/* 表格樣式 */
+.table {
+    border-collapse: separate;
+    border-spacing: 0 0.5rem;
+    margin-bottom: 0;
+    color: var(--light-text);
+}
+
+.table th {
+    border: none;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+}
+
+.table thead th {
+    background-color: var(--dark-surface);
+    color: var(--gray-text);
+    border: none;
+}
+
+.table td {
+    background: white;
+    border: none;
+    padding: 1rem;
+    font-size: 0.875rem;
+    vertical-align: middle;
+    border-color: rgba(255,255,255,0.1);
+}
+
+.table tr:hover td {
+    background: var(--gray-100);
+}
+
+/* 按鈕樣式 */
+.btn {
+    padding: 0.675rem 1.25rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: var(--primary);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: var(--secondary);
+    transform: translateY(-2px);
+}
+
+/* 狀態標籤 */
+.badge {
+    padding: 0.5em 1em;
+    border-radius: 2rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.5em 1em;
+}
+
+.badge.pending {
+    background-color: var(--warning);
+}
+
+.badge.processing {
+    background-color: var(--info);
+}
+
+.badge.completed {
+    background-color: var(--success);
+}
+
+.status-badge {
+    padding: 0.5em 1em;
+    border-radius: 50px;
+    font-size: 0.8em;
+}
+
+.status-badge.pending {
+    background-color: var(--warning);
+    color: white;
+}
+
+.status-badge.processing {
+    background-color: var(--info);
+    color: white;
+}
+
+.status-badge.completed {
+    background-color: var(--success);
+    color: white;
+}
+
+.status-badge.cancelled {
+    background-color: var(--danger);
+    color: white;
+}
+
+/* 導航欄 */
+.navbar {
+    background: #fff !important;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+/* 分頁導航 */
+.pagination {
+    margin-bottom: 0;
+}
+
+.pagination .page-link {
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    margin: 0 0.25rem;
+}
+
+.pagination .active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* 表單元素 */
+.form-control, .form-select {
+    background-color: var(--dark-surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--light-text);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--dark-surface);
+    border-color: var(--primary);
+    color: var(--light-text);
+    box-shadow: none;
+}
+
+/* 圖表容器 */
+.chart-container {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    height: 400px;
+}
