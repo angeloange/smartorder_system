@@ -1,8 +1,5 @@
 {% extends "base.html" %}
 
-{% block title %}訂單管理{% endblock %}
-{% block page_title %}訂單管理{% endblock %}
-
 {% block content %}
 <div class="container-fluid px-4">
     <!-- 訂單狀態過濾器 -->
@@ -33,6 +30,18 @@
         </div>
     </div>
 
+    <!-- 在狀態過濾器和訂單列表之間添加批量操作按鈕 -->
+    <div class="row mb-3">
+        <div class="col">
+            <button id="batchProcessing" class="btn btn-info me-2" style="display: none;">
+                批量開始製作
+            </button>
+            <button id="batchComplete" class="btn btn-success me-2" style="display: none;">
+                批量完成
+            </button>
+        </div>
+    </div>
+
     <!-- 訂單列表 -->
     <div class="card border-0 shadow-sm">
         <div class="card-body">
@@ -40,6 +49,9 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <th>
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
                             <th>訂單編號</th>
                             <th>飲品名稱</th>
                             <th>規格</th>
@@ -51,13 +63,17 @@
                     <tbody>
                         {% for order in orders.items %}
                         <tr>
+                            <td>
+                                <input type="checkbox" 
+                                       class="form-check-input order-checkbox"
+                                       data-order-id="{{ order.order_id }}"
+                                       data-status="{{ order.status.value }}">
+                            </td>
                             <td>{{ order.order_id }}</td>
                             <td>{{ order.drink_name }}</td>
                             <td>
                                 {{ order.size }} / 
-                                {% if order.ice_type == 'hot' %}熱飲
-                                {% elif order.ice_type == 'iced' %}正常冰
-                                {% else %}常溫{% endif %} / 
+                                {{ order.ice_type_display }} / 
                                 {% if order.sugar_type == 'full' %}全糖
                                 {% elif order.sugar_type == 'half' %}半糖
                                 {% else %}無糖{% endif %}
@@ -121,4 +137,108 @@
     </nav>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const batchProcessing = document.getElementById('batchProcessing');
+    const batchComplete = document.getElementById('batchComplete');
+    
+    // 處理全選
+    selectAll.addEventListener('change', function() {
+        document.querySelectorAll('.order-checkbox').forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateBatchButtons();
+    });
+    
+    // 處理單個checkbox的選擇
+    document.querySelectorAll('.order-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateBatchButtons);
+    });
+    
+    // 更新批量按鈕顯示狀態
+    function updateBatchButtons() {
+        const selectedOrders = getSelectedOrders();
+        const hasPending = selectedOrders.some(order => order.status === 'pending');
+        const hasProcessing = selectedOrders.some(order => order.status === 'processing');
+        
+        batchProcessing.style.display = hasPending ? 'inline-block' : 'none';
+        batchComplete.style.display = hasProcessing ? 'inline-block' : 'none';
+    }
+    
+    // 獲取選中的訂單
+    function getSelectedOrders() {
+        const selected = [];
+        document.querySelectorAll('.order-checkbox:checked').forEach(checkbox => {
+            selected.push({
+                id: checkbox.dataset.orderId,
+                status: checkbox.dataset.status
+            });
+        });
+        return selected;
+    }
+    
+    // 處理批量開始製作
+    batchProcessing.addEventListener('click', async function() {
+        const orders = getSelectedOrders().filter(order => order.status === 'pending');
+        await updateBatchStatus(orders, 'processing');
+    });
+    
+    // 處理批量完成
+    batchComplete.addEventListener('click', async function() {
+        const orders = getSelectedOrders().filter(order => order.status === 'processing');
+        await updateBatchStatus(orders, 'completed');
+    });
+    
+    // 批量更新訂單狀態
+    async function updateBatchStatus(orders, newStatus) {
+        try {
+            const promises = orders.map(order => 
+                fetch(`/api/orders/${order.id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                })
+            );
+            
+            await Promise.all(promises);
+            location.reload();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('批量更新訂單狀態失敗，請稍後再試');
+        }
+    }
+    
+    // 處理訂單狀態更新
+    document.querySelectorAll('.status-update-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const orderId = this.dataset.orderId;
+            const newStatus = this.dataset.status;
+            
+            try {
+                const response = await fetch(`/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (!response.ok) throw new Error('更新失敗');
+                
+                // 重新載入頁面以顯示更新後的狀態
+                location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('更新訂單狀態失敗，請稍後再試');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

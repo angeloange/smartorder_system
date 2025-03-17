@@ -17,8 +17,12 @@ class Order(db.Model):
     order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     drink_name = db.Column(db.String(20), nullable=False)
     size = db.Column(db.Enum('大杯', '小杯'), nullable=False, default='小杯')
-    ice_type = db.Column(db.Enum('iced', 'hot', 'room_temp'), nullable=False, default='room_temp')
-    sugar_type = db.Column(db.Enum('full', 'half', 'free'), nullable=False, default='half')
+    ice_type = db.Column(db.Enum('iced', 'less', 'light', 'no_ice', 'hot', 'room'), 
+                        nullable=False, 
+                        default='room')    
+    sugar_type = db.Column(db.Enum('full', 'seventy', 'half', 'light', 'free'), 
+                          nullable=False, 
+                          default='half')    
     order_date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
     order_time = db.Column(db.Time, nullable=False, default=datetime.utcnow().time)
     weather_status = db.Column(db.Enum('sunny', 'cloudy', 'rainy', 'stormy'), nullable=False, default='cloudy')
@@ -27,7 +31,31 @@ class Order(db.Model):
     status = db.Column(db.Enum(OrderStatus), nullable=False, default=OrderStatus.PENDING)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
 
+
+    @property
+    def sugar_type_display(self):
+        sugar_map = {
+            'full': '全糖',
+            'seventy': '七分糖',
+            'half': '半糖',
+            'light': '微糖',
+            'free': '無糖'
+        }
+        return sugar_map.get(self.sugar_type, self.sugar_type)
+    
+    @property
+    def ice_type_display(self):
+        ice_map = {
+            'iced': '正常冰',
+            'less': '少冰',
+            'light': '微冰',
+            'no_ice': '去冰',
+            'hot': '熱飲',
+            'room': '常溫'
+        }
+        return ice_map.get(self.ice_type, str(self.ice_type))
     @property
     def status_display(self):
         status_map = {
@@ -102,23 +130,44 @@ class Product(db.Model):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    price = db.Column(db.DECIMAL(10, 2), nullable=False)
-    category = db.Column(db.Enum('tea', 'milk_tea', 'coffee'), nullable=False)
-    image_url = db.Column(db.String(255))
+    price = db.Column(db.Float, nullable=False)
     description = db.Column(db.Text)
+    image_url = db.Column(db.String(255))
     is_available = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
-            'price': float(self.price),
-            'category': self.category,
-            'image_url': self.image_url,
+            'price': self.price,
             'description': self.description,
+            'image_url': self.image_url,
             'is_available': self.is_available,
-            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S')
         }
+
+
+
+class SystemSetting(db.Model):
+    __tablename__ = 'system_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.String(255))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    @classmethod
+    def get_setting(cls, key, default=None):
+        setting = cls.query.filter_by(key=key).first()
+        return setting.value if setting else default
+    
+    @classmethod
+    def set_setting(cls, key, value):
+        setting = cls.query.filter_by(key=key).first()
+        if setting:
+            setting.value = value
+        else:
+            setting = cls(key=key, value=value)
+            db.session.add(setting)
+        db.session.commit()
