@@ -22,10 +22,10 @@ class OrderAnalyzer:
             # 系統提示詞
             system_prompt = """你是一位飲料店的點餐人員，請分析客人的點餐需求並回傳 JSON 格式的訂單內容。
             規則：
-            1. sugar只能是(全糖,半糖,無糖)
-            2. ice只能是(正常冰,少冰,微冰,去冰,熱)
+            1. sugar只能是(full=全糖, half=半糖, free=無糖)
+            2. ice只能是(iced=正常冰, less=少冰, light=微冰, no_ice=去冰, hot=熱飲)
             3. size只能是(大杯,小杯)
-            4. drink_name只能是菜單中的品項（self.menu）
+            4. drink_name只能是菜單中的品項
             5. 直接回傳JSON格式，不要加入markdown標記
             
             回傳格式範例：
@@ -45,7 +45,7 @@ class OrderAnalyzer:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": text}
                 ],
-                temperature=0.7
+                temperature=0.3
             )
             
             result = completion.choices[0].message.content.strip()

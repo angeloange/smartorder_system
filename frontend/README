@@ -1,0 +1,44 @@
+# 智慧飲料點餐系統 - 前台
+
+## 功能特點
+- 自然語言點餐
+- 支援多種糖度和冰塊選項
+- 整合 OpenAI API
+- 資料庫訂單管理
+
+## 安裝步驟
+1. 建立虛擬環境：
+```python
+python -m venv .venv
+source .venv/bin/activate  # macOS
+
+#安裝套件
+pip install -r requirements.txt
+
+＃環境變數
+
+OPENAI_API_KEY=您的OpenAI_API金鑰
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=您的資料庫密碼
+DB_NAME=beverage_db
+
+
+#專案結構
+
+frontend/
+├── app.py              # 主應用程式
+├── order_analyzer.py   # 訂單分析器
+├── codes/             
+│   ├── db.py          # 資料庫連接
+│   └── models.py      # 資料模型
+├── static/            # 靜態檔案
+└── templates/         # 網頁模板
+
+
+
+#5. 最後，建立 `requirements.txt`
+
+```bash
+pip freeze > requirements.txt
