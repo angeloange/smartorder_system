@@ -35,20 +35,6 @@ socketio.init_app(app)
 def load_user(user_id):
     return Admin.query.get(int(user_id))
 
-# 僅在開發環境中使用，正式環境請刪除此路由
-
-@app.route('/test_websocket/<order_number>', methods=['GET'])
-def test_websocket(order_number):
-    """測試 WebSocket 推送功能"""
-    try:
-        print(f"測試 WebSocket 推送訂單號碼：{order_number}")
-        socketio.emit('order_completed', {
-            'order_number': order_number
-        })
-        return jsonify({'status': 'success', 'message': f'已推送訂單號碼：{order_number}'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-
 
 # 登入頁面
 @app.route('/login', methods=['GET', 'POST'])
