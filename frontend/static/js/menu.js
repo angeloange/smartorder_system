@@ -174,6 +174,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // 初始化 WebSocket 連接
+    const socket = io('http://localhost:5003');  // 後台服務器地址
+    
+    socket.on('connect', () => {
+        console.log('Connected to WebSocket server');
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+    });
+    
+    // 監聽訂單完成事件
+    socket.on('order_completed', (data) => {
+        console.log('訂單完成:', data);
+        const numberDisplay = document.querySelector('.number-display');
+        if (numberDisplay) {
+            numberDisplay.textContent = data.order_number;
+            // 添加閃爍效果
+            numberDisplay.classList.add('flash');
+            setTimeout(() => {
+                numberDisplay.classList.remove('flash');
+            }, 2000);
+        }
+    });
+
     // 確認訂單按鈕
     // 修改確認訂單按鈕的處理函數
     document.getElementById('confirmOrder').onclick = async () => {

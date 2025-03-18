@@ -1,12 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from .models import db, Admin, Order, OrderStatus  # 修改為相對導入
-from config import Config
+from .config import Config
 from datetime import datetime, timedelta
 import pandas as pd
 from werkzeug.utils import secure_filename
 import os
 import json
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -27,9 +28,27 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'  # 確保這行存在
 login_manager.login_message = '請先登入'  # 添加中文提示訊息
 
+socketio = SocketIO(cors_allowed_origins="*")
+socketio.init_app(app)
+
 @login_manager.user_loader
 def load_user(user_id):
     return Admin.query.get(int(user_id))
+
+# 僅在開發環境中使用，正式環境請刪除此路由
+
+@app.route('/test_websocket/<order_number>', methods=['GET'])
+def test_websocket(order_number):
+    """測試 WebSocket 推送功能"""
+    try:
+        print(f"測試 WebSocket 推送訂單號碼：{order_number}")
+        socketio.emit('order_completed', {
+            'order_number': order_number
+        })
+        return jsonify({'status': 'success', 'message': f'已推送訂單號碼：{order_number}'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 
 # 登入頁面
 @app.route('/login', methods=['GET', 'POST'])
@@ -192,15 +211,39 @@ def update_product_status(product_id):
 @app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
 @login_required
 def update_order_status(order_id):
-    order = Order.query.get_or_404(order_id)
-    data = request.get_json()
-    new_status = data.get('status')
-    
-    if new_status in [status.value for status in OrderStatus]:
+    try:
+        print(f"收到更新訂單狀態請求: 訂單ID={order_id}")
+        order = Order.query.get_or_404(order_id)
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        print(f"嘗試將訂單狀態從 {order.status} 更新為 {new_status}")
+        
+        # 確保所有可能的狀態值都被接受
+        all_statuses = [status.value for status in OrderStatus]
+        print(f"有效的訂單狀態: {all_statuses}")
+        
+        if new_status not in all_statuses:
+            return jsonify({'status': 'error', 'message': f'無效的狀態：{new_status}，有效狀態：{all_statuses}'}), 400
+
         order.status = new_status
         db.session.commit()
-        return jsonify({'status': 'success'})
-    return jsonify({'status': 'error', 'message': '無效的狀態'}), 400
+        
+        # 如果訂單狀態更新為已完成，發送 WebSocket 消息
+        if new_status == OrderStatus.COMPLETED.value:
+            print(f"發送訂單完成通知，訂單號碼：{order.order_number}")
+            try:
+                socketio.emit('order_completed', {
+                    'order_number': order.order_number[-2:]  # 只發送最後兩位
+                })
+                print("WebSocket 訊息發送成功")
+            except Exception as socket_error:
+                print(f"WebSocket 訊息發送失敗: {str(socket_error)}")
+        
+        return jsonify({'status': 'success', 'message': '訂單狀態已更新'})
+    except Exception as e:
+        print(f"更新訂單狀態時發生錯誤: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # 數據分析頁面
 @app.route('/analytics')
@@ -387,4 +430,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)

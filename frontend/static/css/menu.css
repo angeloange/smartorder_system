@@ -140,9 +140,19 @@ body {
 
 .number-display {
     font-size: 2em;
-    color: var(--secondary-color);
+    font-weight: bold;
     text-align: center;
     margin: 10px 0;
+    transition: all 0.3s ease;
+}
+/* 閃爍效果 */
+@keyframes flash {
+    0%, 100% { color: #4CAF50; }
+    50% { color: #FF5722; }
+}
+
+.number-display.flash {
+    animation: flash 1s ease-in-out 2;
 }
 
 .info-text {
