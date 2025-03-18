@@ -196,8 +196,20 @@ def confirm_order():
         data = request.get_json()
         order_details = data.get('order_details', [])
         
+        # 展開訂單項目，處理相同品項多杯的情況
+        expanded_orders = []
+        for order in order_details:
+            # 獲取數量，預設為1
+            quantity = order.get('quantity', 1)
+            
+            # 根據數量複製訂單項目
+            for i in range(quantity):
+                # 創建新的訂單項目，但不包含 quantity
+                order_item = {k: v for k, v in order.items() if k != 'quantity'}
+                expanded_orders.append(order_item)
+        
         # 生成足夠數量的訂單號碼
-        order_numbers = generate_order_number(db, len(order_details))
+        order_numbers = generate_order_number(db, len(expanded_orders))
         if not order_numbers:
             raise Exception("無法生成訂單號碼")
         
@@ -206,7 +218,7 @@ def confirm_order():
         
         success_count = 0
         
-        for i, order in enumerate(order_details):
+        for i, order in enumerate(expanded_orders):
             try:
                 query = """
                     INSERT INTO orders (
@@ -237,16 +249,17 @@ def confirm_order():
             
         return jsonify({
             'status': 'success',
-            'message': f'成功建立 {success_count}/{len(order_details)} 筆訂單',
+            'message': f'成功建立 {success_count}/{len(expanded_orders)} 筆訂單',
             'order_number': order_numbers[0][-2:]  # 只返回第一杯飲料號碼的最後兩位
         })
 
     except Exception as e:
         print(f"儲存訂單時發生錯誤: {str(e)}")
-        # 不使用 rollback()，因為 DB 類沒有此方法
         return jsonify({
             'status': 'error',
             'message': '訂單處理失敗'
         })
+
+
 if __name__ == '__main__':
     app.run(debug=True)
