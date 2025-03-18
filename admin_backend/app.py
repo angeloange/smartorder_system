@@ -212,40 +212,59 @@ def update_order_status(order_id):
         if new_status not in all_statuses:
             return jsonify({'status': 'error', 'message': f'無效的狀態：{new_status}，有效狀態：{all_statuses}'}), 400
 
+        old_status = order.status
         order.status = new_status
         db.session.commit()
         
         # 計算新的等候時間
         waiting_time = calculate_waiting_time()
+        print(f"當前等候時間: {waiting_time}分鐘")
         
         # 如果訂單狀態更新為已完成，發送訂單完成消息
         if new_status == OrderStatus.COMPLETED.value:
             try:
-                # 檢查是否有訂單號碼
-                order_number = getattr(order, 'order_number', f"ID{order.id}")
-                if order_number:
-                    # 只取訂單號碼的最後兩位
-                    display_number = order_number[-2:] if len(order_number) >= 2 else order_number
-                    
-                    socketio.emit('order_completed', {
-                        'order_number': display_number,
-                        'waiting_time': waiting_time  # 順便發送等候時間
-                    })
-                    print(f"WebSocket 訊息發送成功，訂單號碼：{display_number}，等候時間：{waiting_time}分鐘")
-            except Exception as socket_error:
-                print(f"WebSocket 訊息發送失敗: {str(socket_error)}")
+                # 確保獲取到訂單號碼
+                order_number = getattr(order, 'order_number', None)
+                print(f"訂單號碼: {order_number}")
+                
+                # 如果沒有訂單號碼，使用訂單ID
+                if not order_number:
+                    order_number = f"A{order_id}"
+                    print(f"使用替代訂單號碼: {order_number}")
+                
+                # 只取訂單號碼的最後兩位（確保它至少有兩位）
+                display_number = order_number[-2:] if len(order_number) >= 2 else order_number
+                
+                print(f"最終顯示的取餐號碼: {display_number}")
+                
+                # 發送事件
+                socketio.emit('order_completed', {
+                    'order_number': display_number,
+                    'waiting_time': waiting_time
+                })
+                print(f"WebSocket 訊息已發送: 取餐號碼={display_number}, 等候時間={waiting_time}分鐘")
+                
+            except Exception as e:
+                print(f"發送訂單完成消息失敗: {str(e)}")
+                import traceback
+                traceback.print_exc()
         else:
             # 如果不是完成狀態，也發送等候時間更新
-            socketio.emit('waiting_time_update', {
-                'waiting_time': waiting_time
-            })
-            print(f"等候時間已更新：{waiting_time}分鐘")
+            try:
+                socketio.emit('waiting_time_update', {
+                    'waiting_time': waiting_time
+                })
+                print(f"等候時間已更新：{waiting_time}分鐘")
+            except Exception as e:
+                print(f"發送等候時間更新失敗: {str(e)}")
         
         return jsonify({'status': 'success', 'message': '訂單狀態已更新'})
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"更新訂單狀態時發生錯誤: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
+        
 #添加 API 端點用於初始加載等候時間
 @app.route('/api/waiting-time', methods=['GET'])
 def get_waiting_time():
