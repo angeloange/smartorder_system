@@ -143,52 +143,99 @@ def confirm_order():
         data = request.get_json()
         order_details = data.get('order_details', [])
         
-        now = datetime.now()
-        weather_status = WeatherStatus.SUNNY.value
+        # 確保資料庫連接
+        db.connect()
         
-        for order in order_details:
-            ice_type = ICE_MAPPING.get(order.get('ice', '正常冰'), 'iced')
-            sugar_type = SUGAR_MAPPING.get(order.get('sugar', '全糖'), 'full')
+        # 生成訂單編號
+        order_number = generate_order_number(db)
+        if not order_number:
+            raise Exception("無法生成訂單編號")
             
+        # 插入訂單
+        for order in order_details:
             query = """
                 INSERT INTO orders (
-                    drink_name, size, ice_type, sugar_type,
-                    order_date, order_time, weather_status,
-                    temperature, created_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    drink_name, size, ice_type, sugar_type, 
+                    order_date, order_time, weather_status, temperature,
+                    status, order_number, created_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                )
             """
             
+            current_date = datetime.now().date()
+            current_time = datetime.now().strftime('%H:%M:%S')
+            
             values = (
-                order.get('drink_name'),
-                order.get('size', '大杯'),
-                ice_type,
-                sugar_type,
-                now.date(),
-                now.time(),
-                weather_status,
+                order['drink_name'],
+                order['size'],
+                order['ice'],
+                order['sugar'],
+                current_date,
+                current_time,
+                'sunny',
                 25.0,
-                now
+                'pending',
+                order_number
             )
             
             print(f"準備插入訂單，值為: {values}")
+            success = db.execute(query, values)
             
-            # 確保資料庫連接
-            if not db.conn or not db.cursor:
-                db.connect()
-                
-            if not db.execute(query, values):
+            if not success:
                 raise Exception("訂單儲存失敗")
 
         return jsonify({
             'status': 'success',
-            'message': '訂單已成功建立'
+            'message': '訂單已成功建立',
+            'order_number': order_number[-2:]
         })
 
     except Exception as e:
         print(f"儲存訂單時發生錯誤: {str(e)}")
+        if db.conn:
+            db.conn.rollback()
         return jsonify({
             'status': 'error',
             'message': '訂單處理失敗'
         })
+
+
+def get_last_order_number(db_instance):
+    """獲取今天最後一筆訂單號碼"""
+    try:
+        today = datetime.now().strftime('%m%d')
+        query = """
+            SELECT order_number 
+            FROM orders 
+            WHERE order_number LIKE %s
+            AND DATE(created_at) = CURDATE()
+            ORDER BY order_number DESC 
+            LIMIT 1
+        """
+        result = db_instance.fetchone(query, (f"{today}%",))
+        return result['order_number'] if result else None
+    except Exception as e:
+        print(f"獲取最後訂單號碼時發生錯誤: {str(e)}")
+        return None
+
+def generate_order_number(db):
+    """生成新的訂單號碼（MMDDA1-MMDDZ9）"""
+    today = datetime.now().strftime('%m%d')
+    last_number = get_last_order_number(db)
+    
+    if not last_number:
+        return f'{today}A1'  # 當天第一筆訂單
+    
+    # 從完整訂單號碼中提取字母和數字
+    letter = last_number[-2]  # 倒數第二個字符（字母）
+    number = int(last_number[-1])  # 最後一個字符（數字）
+    
+    if number < 9:
+        return f'{today}{letter}{number + 1}'
+    else:
+        next_letter = chr(ord(letter) + 1) if letter != 'Z' else 'A'
+        return f'{today}{next_letter}1'
+
 if __name__ == '__main__':
     app.run(debug=True)

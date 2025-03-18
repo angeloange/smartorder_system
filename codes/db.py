@@ -74,9 +74,15 @@ class DB:
             print(f'fetchall錯誤: {e}')
             return None
 
-    def fetchone(self):
+    def fetchone(self, query, params=None):
+        """執行查詢並返回一筆結果"""
         try:
-            return self.cursor.fetchone()
+            if not self.conn or not self.cursor:
+                self.connect()
+            
+            self.cursor.execute(query, params)
+            result = self.cursor.fetchone()
+            return result
         except Exception as e:
             print(f'fetchone錯誤: {e}')
             return None

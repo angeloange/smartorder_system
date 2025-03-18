@@ -175,6 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 確認訂單按鈕
+    // 修改確認訂單按鈕的處理函數
     document.getElementById('confirmOrder').onclick = async () => {
         try {
             const response = await fetch('/confirm_order', {
@@ -190,21 +191,35 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const result = await response.json();
             if (result.status === 'success') {
-                orderDetails.innerHTML = '<div class="success-message">好的，尊貴的客人請稍候，正在為您製作飲品</div>';
-                document.querySelector('.button-group').classList.add('hidden');
-                
-                // 5秒後重置
-                setTimeout(() => {
-                    orderResult.classList.add('hidden');
-                    startOrderBtn.disabled = false;
-                    orderInput.value = '';
-                }, 5000);
+                // 使用 SweetAlert2 顯示成功訊息
+                Swal.fire({
+                    title: '訂單已確認',
+                    html: `
+                        <p>好的，尊貴的客人請稍候</p>
+                        <p>正在為您製作飲品</p>
+                        <p>您的取餐號碼是 <strong>${result.order_number}</strong></p>
+                    `,
+                    icon: 'success',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                }).then(() => {
+                    // 3秒後重置頁面
+                    location.reload();
+                });
+            } else {
+                throw new Error(result.message || '訂單處理失敗');
             }
         } catch (error) {
             console.error('確認訂單時發生錯誤:', error);
+            Swal.fire({
+                title: '錯誤',
+                text: '訂單處理失敗，請稍後再試',
+                icon: 'error',
+                confirmButtonText: '確定'
+            });
         }
     };
-
     // 取消按鈕
     document.getElementById('cancelOrder').onclick = () => {
         orderResult.classList.add('hidden');
