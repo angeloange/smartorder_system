@@ -232,8 +232,17 @@ def update_order_status(order_id):
                     order_number = f"A{order_id}"
                     print(f"使用替代訂單號碼: {order_number}")
                 
-                # 只取訂單號碼的最後兩位（確保它至少有兩位）
-                display_number = order_number[-2:] if len(order_number) >= 2 else order_number
+                # 提取基本訂單號碼 (處理可能包含 - 的情況)
+                if '-' in order_number:
+                    base_number = order_number.split('-')[0]
+                else:
+                    base_number = order_number
+                
+                # 從基本訂單號碼中提取字母和數字部分
+                if len(base_number) >= 6:  # MMDDA1 格式至少有6位
+                    display_number = base_number[-2:]  # 只取字母和數字
+                else:
+                    display_number = base_number
                 
                 print(f"最終顯示的取餐號碼: {display_number}")
                 
@@ -243,7 +252,7 @@ def update_order_status(order_id):
                     'waiting_time': waiting_time
                 })
                 print(f"WebSocket 訊息已發送: 取餐號碼={display_number}, 等候時間={waiting_time}分鐘")
-                
+                        
             except Exception as e:
                 print(f"發送訂單完成消息失敗: {str(e)}")
                 import traceback

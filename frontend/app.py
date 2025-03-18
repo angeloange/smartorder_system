@@ -136,70 +136,6 @@ def monthly_top_drinks():
             'message': '獲取熱銷飲品失敗'
         })
 
-# 新增確認訂單路由
-@app.route('/confirm_order', methods=['POST'])
-def confirm_order():
-    try:
-        data = request.get_json()
-        order_details = data.get('order_details', [])
-        
-        # 確保資料庫連接
-        db.connect()
-        
-        # 生成訂單編號
-        order_number = generate_order_number(db)
-        if not order_number:
-            raise Exception("無法生成訂單編號")
-            
-        # 插入訂單
-        for order in order_details:
-            query = """
-                INSERT INTO orders (
-                    drink_name, size, ice_type, sugar_type, 
-                    order_date, order_time, weather_status, temperature,
-                    status, order_number, created_at
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
-                )
-            """
-            
-            current_date = datetime.now().date()
-            current_time = datetime.now().strftime('%H:%M:%S')
-            
-            values = (
-                order['drink_name'],
-                order['size'],
-                order['ice'],
-                order['sugar'],
-                current_date,
-                current_time,
-                'sunny',
-                25.0,
-                'pending',
-                order_number
-            )
-            
-            print(f"準備插入訂單，值為: {values}")
-            success = db.execute(query, values)
-            
-            if not success:
-                raise Exception("訂單儲存失敗")
-
-        return jsonify({
-            'status': 'success',
-            'message': '訂單已成功建立',
-            'order_number': order_number[-2:]
-        })
-
-    except Exception as e:
-        print(f"儲存訂單時發生錯誤: {str(e)}")
-        if db.conn:
-            db.conn.rollback()
-        return jsonify({
-            'status': 'error',
-            'message': '訂單處理失敗'
-        })
-
 
 def get_last_order_number(db_instance):
     """獲取今天最後一筆訂單號碼"""
@@ -219,23 +155,98 @@ def get_last_order_number(db_instance):
         print(f"獲取最後訂單號碼時發生錯誤: {str(e)}")
         return None
 
-def generate_order_number(db):
+def generate_order_number(db, count=1):
     """生成新的訂單號碼（MMDDA1-MMDDZ9）"""
     today = datetime.now().strftime('%m%d')
     last_number = get_last_order_number(db)
     
+    # 基本訂單號碼
     if not last_number:
-        return f'{today}A1'  # 當天第一筆訂單
-    
-    # 從完整訂單號碼中提取字母和數字
-    letter = last_number[-2]  # 倒數第二個字符（字母）
-    number = int(last_number[-1])  # 最後一個字符（數字）
-    
-    if number < 9:
-        return f'{today}{letter}{number + 1}'
+        base_number = f'{today}A1'  # 當天第一筆訂單
     else:
-        next_letter = chr(ord(letter) + 1) if letter != 'Z' else 'A'
-        return f'{today}{next_letter}1'
+        # 從完整訂單號碼中提取字母和數字
+        if '-' in last_number:
+            base_last = last_number.split('-')[0]
+        else:
+            base_last = last_number
+            
+        letter = base_last[-2]  # 倒數第二個字符（字母）
+        number = int(base_last[-1])  # 最後一個字符（數字）
+        
+        if number < 9:
+            base_number = f'{today}{letter}{number + 1}'
+        else:
+            next_letter = chr(ord(letter) + 1) if letter != 'Z' else 'A'
+            base_number = f'{today}{next_letter}1'
+    
+    # 生成所有訂單號碼
+    order_numbers = []
+    for i in range(count):
+        if i == 0:
+            order_numbers.append(base_number)
+        else:
+            # 使用連字號+序號，避免衝突
+            order_numbers.append(f"{base_number}-{i+1}")
+    
+    return order_numbers
 
+@app.route('/confirm_order', methods=['POST'])
+def confirm_order():
+    try:
+        data = request.get_json()
+        order_details = data.get('order_details', [])
+        
+        # 生成足夠數量的訂單號碼
+        order_numbers = generate_order_number(db, len(order_details))
+        if not order_numbers:
+            raise Exception("無法生成訂單號碼")
+        
+        # 取得當前時間和天氣資訊
+        order_date, order_time = get_now_time()
+        
+        success_count = 0
+        
+        for i, order in enumerate(order_details):
+            try:
+                query = """
+                    INSERT INTO orders (
+                        drink_name, size, ice_type, sugar_type, 
+                        order_date, order_time, 
+                        weather_status, temperature,
+                        status, created_at, order_number
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s)
+                """
+                values = (
+                    order['drink_name'], order['size'],
+                    order['ice'], order['sugar'],
+                    order_date, order_time,
+                    'sunny', 25.0,
+                    'pending', order_numbers[i]
+                )
+                
+                print(f"準備插入訂單，值為: {values}")
+                if db.execute(query, values):
+                    success_count += 1
+                else:
+                    print(f"插入訂單失敗: {values}")
+            except Exception as e:
+                print(f"插入單筆訂單時發生錯誤: {str(e)}")
+        
+        if success_count == 0:
+            raise Exception("所有訂單儲存失敗")
+            
+        return jsonify({
+            'status': 'success',
+            'message': f'成功建立 {success_count}/{len(order_details)} 筆訂單',
+            'order_number': order_numbers[0][-2:]  # 只返回第一杯飲料號碼的最後兩位
+        })
+
+    except Exception as e:
+        print(f"儲存訂單時發生錯誤: {str(e)}")
+        # 不使用 rollback()，因為 DB 類沒有此方法
+        return jsonify({
+            'status': 'error',
+            'message': '訂單處理失敗'
+        })
 if __name__ == '__main__':
     app.run(debug=True)
