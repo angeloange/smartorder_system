@@ -226,7 +226,16 @@
             <!-- 右側底部資訊 -->
             <!-- 修改右側底部資訊區域 -->
             <div class="bottom-info">
-                <div class=                    <h3>熱銷排行</h3>
+                <div class="info-box">
+                    <h3 data-translate="hotSales">熱銷排行</h3>
+                    <div class="rank-list hot-sales">
+                        <!-- 這裡會由 JS 動態填充內容 -->
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h3 data-translate="weatherRecommend">天氣推薦</h3>
+                    <div class="rank-list weather-recommend">
+                        <!-- 這裡會由 JS 動態填充內容 -->
                     </div>
                 </div>
             </div>
@@ -341,6 +350,55 @@
             }
         });
     });
+    </script>
+    <script>
+        // 確保這是最後一個加載的腳本，將調用置於文件底部
+        document.addEventListener('DOMContentLoaded', function() {
+            // 等待 1 秒後執行，確保其他所有初始化已完成
+            setTimeout(function() {
+                console.log('開始加載熱銷排行...');
+                // 手動調用更新熱銷排行函數
+                if (typeof updateTopDrinks === 'function') {
+                    updateTopDrinks();
+                } else {
+                    console.error('updateTopDrinks 函數不存在！');
+                    
+                    // 直接在這裡實現熱銷排行功能
+                    async function loadTopDrinks() {
+                        try {
+                            console.log('直接獲取熱銷數據');
+                            const response = await fetch('/monthly_top_drinks');
+                            const result = await response.json();
+                            
+                            console.log('API 回應:', result);
+                            
+                            const container = document.querySelector('.rank-list.hot-sales');
+                            if (container && result.data && result.data.length > 0) {
+                                container.innerHTML = '';
+                                result.data.forEach((item, index) => {
+                                    const div = document.createElement('div');
+                                    div.className = 'rank-item';
+                                    div.textContent = `${index + 1}. ${item.name} (${item.count}杯)`;
+                                    container.appendChild(div);
+                                });
+                            } else {
+                                if (container) {
+                                    container.innerHTML = '<div class="rank-item">暫無熱銷數據</div>';
+                                }
+                            }
+                        } catch (error) {
+                            console.error('直接獲取熱銷數據失敗:', error);
+                            const container = document.querySelector('.rank-list.hot-sales');
+                            if (container) {
+                                container.innerHTML = '<div class="rank-item">載入失敗</div>';
+                            }
+                        }
+                    }
+                    
+                    loadTopDrinks();
+                }
+            }, 1000);
+        });
     </script>
 </body>
 </html>

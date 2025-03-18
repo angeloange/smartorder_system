@@ -303,32 +303,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 在 DOMContentLoaded 的最後呼叫初始化
     updateTranslations(currentLang);
+
+    // 調用更新熱銷排行
+    console.log('從 menu.js 主要初始化中調用 updateTopDrinks');
+    updateTopDrinks();
 });
 
 async function updateTopDrinks() {
     try {
-        console.log('開始更新熱銷飲料');  // 除錯用
+        console.log('開始更新熱銷飲料');
         const response = await fetch('/monthly_top_drinks');
         const result = await response.json();
         
-        console.log('API 回應:', result);  // 除錯用
+        console.log('熱銷API回應:', result);
         
-        if (result.status === 'success' && result.data.length > 0) {
-            const topDrinksContainer = document.querySelector('.rank-list.hot-sales');            if (topDrinksContainer) {
-                topDrinksContainer.innerHTML = result.data
-                    .map((item, index) => `
-                        <div class="rank-item">
-                            ${index + 1}. ${item.drink_name} (${item.count}杯)
-                        </div>
-                    `).join('');
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+            const topDrinksContainer = document.querySelector('.rank-list.hot-sales');
+            if (topDrinksContainer) {
+                // 清空容器
+                topDrinksContainer.innerHTML = '';
+                
+                // 建立排行項目
+                result.data.forEach((item, index) => {
+                    const rankItem = document.createElement('div');
+                    rankItem.className = 'rank-item';
+                    rankItem.textContent = `${index + 1}. ${item.name || '未知飲品'} (${item.count || 0}杯)`;
+                    
+                    topDrinksContainer.appendChild(rankItem);
+                });
             } else {
                 console.error('找不到熱銷排行容器(.hot-sales)');
             }
         } else {
+            const container = document.querySelector('.rank-list.hot-sales');
+            if (container) {
+                container.innerHTML = '<div class="rank-item">暫無熱銷資料</div>';
+            }
             console.log('沒有熱銷資料或獲取失敗');
         }
     } catch (error) {
         console.error('更新熱銷飲料失敗:', error);
+        const container = document.querySelector('.rank-list.hot-sales');
+        if (container) {
+            container.innerHTML = '<div class="rank-item">資料載入失敗</div>';
+        }
     }
 }
 

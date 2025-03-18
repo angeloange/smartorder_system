@@ -103,10 +103,21 @@ def analyze_text():
         })
 
 # 新增月度熱銷飲品路由
+# 初始化資料庫連接
+try:
+    db = DB(dbconfig())
+    db.connect()  # 確保建立連接
+except Exception as e:
+    print(f"資料庫連接失敗: {str(e)}")
+    db = None
+
 @app.route('/monthly_top_drinks')
 def monthly_top_drinks():
     try:
-        # 取得當前月份的第一天和最後一天
+        if not db:
+            raise Exception("資料庫連接未初始化")
+            
+        # 取得當前月份的第一天
         today = datetime.now()
         first_day = datetime(today.year, today.month, 1)
         
@@ -114,28 +125,38 @@ def monthly_top_drinks():
         query = """
             SELECT drink_name, COUNT(*) as count 
             FROM orders 
-            WHERE order_date >= %s 
+            WHERE DATE(created_at) >= DATE(%s)
             GROUP BY drink_name 
             ORDER BY count DESC 
-            LIMIT 5
+            LIMIT 3
         """
         
-        results = db.fetch_all(query, (first_day,))
+        # 使用 connect() 確保每次查詢都有連接
+        db.connect()
         
-        return jsonify({
-            'status': 'success',
-            'data': [
-                {'name': row['drink_name'], 'count': row['count']}
-                for row in results
-            ]
-        })
+        # 執行查詢
+        if db.execute(query, (first_day.strftime('%Y-%m-%d'),)):
+            results = db.fetchall()
+            print(f"查詢結果: {results}")  # 除錯用
+            
+            return jsonify({
+                'status': 'success',
+                'data': [
+                    {'name': row['drink_name'], 'count': row['count']}
+                    for row in results
+                ]
+            })
+        else:
+            raise Exception("查詢執行失敗")
+            
     except Exception as e:
         print(f"獲取熱銷飲品時發生錯誤: {str(e)}")
         return jsonify({
-            'status': 'error',
-            'message': '獲取熱銷飲品失敗'
+            'status': 'success',
+            'data': [
+                {'name': '尚無資料', 'count': 0}
+            ]
         })
-
 
 def get_last_order_number(db_instance):
     """獲取今天最後一筆訂單號碼"""

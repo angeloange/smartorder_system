@@ -377,3 +377,41 @@ body {
 .toggle-input:not(:checked) + .toggle-label .toggle-text-en {
     color: white;
 }
+
+/* 修改 panel-content 為固定高度，並確保溢出時可滾動 */
+.menu-panel .panel-content {
+    height: 450px; /* 減少內容區域高度，給底部留空間 */
+    overflow-y: auto;
+}
+
+/* 確保底部資訊固定在底部 */
+.menu-panel .bottom-info {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+/* 調整右側資訊方塊高度以匹配左側 */
+.menu-panel .info-box {
+    height: 120px;
+    overflow-y: auto;
+}
+
+/* 美化排行列表樣式 */
+.rank-list {
+    margin-top: 8px;
+    font-size: 0.9em;
+    max-height: 70px; /* 限制高度確保不溢出 */
+    overflow-y: auto;
+}
+
+.rank-item {
+    padding: 3px 0;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rank-item:hover {
+    color: var(--secondary-color);
+}
