@@ -147,7 +147,6 @@ def confirm_order():
         weather_status = WeatherStatus.SUNNY.value
         
         for order in order_details:
-            # 使用映射轉換冰塊和糖度
             ice_type = ICE_MAPPING.get(order.get('ice', '正常冰'), 'iced')
             sugar_type = SUGAR_MAPPING.get(order.get('sugar', '全糖'), 'full')
             
@@ -158,9 +157,10 @@ def confirm_order():
                     temperature, created_at
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
+            
             values = (
-                order['drink_name'],
-                order.get('size', Size.SMALL.value),
+                order.get('drink_name'),
+                order.get('size', '大杯'),
                 ice_type,
                 sugar_type,
                 now.date(),
@@ -170,8 +170,12 @@ def confirm_order():
                 now
             )
             
-            print(f"Inserting order with values: {values}")  # 除錯訊息
+            print(f"準備插入訂單，值為: {values}")
             
+            # 確保資料庫連接
+            if not db.conn or not db.cursor:
+                db.connect()
+                
             if not db.execute(query, values):
                 raise Exception("訂單儲存失敗")
 
@@ -184,7 +188,7 @@ def confirm_order():
         print(f"儲存訂單時發生錯誤: {str(e)}")
         return jsonify({
             'status': 'error',
-            'message': '儲存訂單失敗'
+            'message': '訂單處理失敗'
         })
 if __name__ == '__main__':
     app.run(debug=True)
