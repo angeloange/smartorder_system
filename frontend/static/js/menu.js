@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const textInputMode = document.getElementById('textInputMode');
     const voiceInputMode = document.getElementById('voiceInputMode');
     const langToggle = document.getElementById('langToggle');
+    const waitingTimeElement = document.querySelector('.waiting-time');
     let currentLang = 'zh-TW';
     let isVoiceMode = false;
 
@@ -179,6 +180,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     socket.on('connect', () => {
         console.log('Connected to WebSocket server');
+        // 連接後獲取初始等候時間
+        fetchWaitingTime();
     });
     
     socket.on('connect_error', (error) => {
@@ -197,7 +200,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 numberDisplay.classList.remove('flash');
             }, 2000);
         }
+        
+        // 更新等候時間
+        if (waitingTimeElement && data.waiting_time !== undefined) {
+            updateWaitingTime(data.waiting_time);
+        }
     });
+
+    // 接收等候時間更新事件
+    socket.on('waiting_time_update', (data) => {
+        console.log('Waiting time update:', data);
+        if (waitingTimeElement && data.waiting_time !== undefined) {
+            updateWaitingTime(data.waiting_time);
+        }
+    });
+
+    // 更新等候時間顯示
+    function updateWaitingTime(minutes) {
+        waitingTimeElement.textContent = `${minutes} 分鐘`;
+        // 添加動畫效果
+        waitingTimeElement.classList.add('flash');
+        setTimeout(() => {
+            waitingTimeElement.classList.remove('flash');
+        }, 2000);
+    }
+
+    // 獲取初始等候時間
+    function fetchWaitingTime() {
+        fetch('http://localhost:5003/api/waiting-time')
+            .then(response => response.json())
+            .then(data => {
+                if (data.waiting_time !== undefined) {
+                    updateWaitingTime(data.waiting_time);
+                }
+            })
+            .catch(error => console.error('Error fetching waiting time:', error));
+    }
 
     // 確認訂單按鈕
     // 修改確認訂單按鈕的處理函數

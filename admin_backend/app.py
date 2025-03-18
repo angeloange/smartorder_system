@@ -215,21 +215,56 @@ def update_order_status(order_id):
         order.status = new_status
         db.session.commit()
         
-        # 如果訂單狀態更新為已完成，發送 WebSocket 消息
+        # 計算新的等候時間
+        waiting_time = calculate_waiting_time()
+        
+        # 如果訂單狀態更新為已完成，發送訂單完成消息
         if new_status == OrderStatus.COMPLETED.value:
-            print(f"發送訂單完成通知，訂單號碼：{order.order_number}")
             try:
-                socketio.emit('order_completed', {
-                    'order_number': order.order_number[-2:]  # 只發送最後兩位
-                })
-                print("WebSocket 訊息發送成功")
+                # 檢查是否有訂單號碼
+                order_number = getattr(order, 'order_number', f"ID{order.id}")
+                if order_number:
+                    # 只取訂單號碼的最後兩位
+                    display_number = order_number[-2:] if len(order_number) >= 2 else order_number
+                    
+                    socketio.emit('order_completed', {
+                        'order_number': display_number,
+                        'waiting_time': waiting_time  # 順便發送等候時間
+                    })
+                    print(f"WebSocket 訊息發送成功，訂單號碼：{display_number}，等候時間：{waiting_time}分鐘")
             except Exception as socket_error:
                 print(f"WebSocket 訊息發送失敗: {str(socket_error)}")
+        else:
+            # 如果不是完成狀態，也發送等候時間更新
+            socketio.emit('waiting_time_update', {
+                'waiting_time': waiting_time
+            })
+            print(f"等候時間已更新：{waiting_time}分鐘")
         
         return jsonify({'status': 'success', 'message': '訂單狀態已更新'})
     except Exception as e:
         print(f"更新訂單狀態時發生錯誤: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+#添加 API 端點用於初始加載等候時間
+@app.route('/api/waiting-time', methods=['GET'])
+def get_waiting_time():
+    """獲取目前等候時間"""
+    try:
+        waiting_time = calculate_waiting_time()
+        return jsonify({'waiting_time': waiting_time})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+#後台計算等候時間的函數
+def calculate_waiting_time():
+    """計算目前等候時間（僅考慮未完成且未取消的訂單）"""
+    # 只計算待處理和處理中的訂單
+    active_count = Order.query.filter(
+        Order.status.in_([OrderStatus.PENDING.value, OrderStatus.PROCESSING.value])
+    ).count()
+    waiting_minutes = round(active_count * 1.2, 1)  # 四捨五入到小數點後一位
+    return waiting_minutes
 
 # 數據分析頁面
 @app.route('/analytics')
