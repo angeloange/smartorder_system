@@ -29,7 +29,9 @@ instance/*.db
 logs/
 temp_audio/
 venv/
-
+poetry.lock
+pyproject.toml
+tempCodeRunnerFile.py
 # 備份檔案
 project_backup_*/
 merge_gitignore.py

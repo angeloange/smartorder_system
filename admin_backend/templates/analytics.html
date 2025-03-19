@@ -1,150 +1,225 @@
-{% extends "base.html" %}
-
-{% block title %}數據分析{% endblock %}
-{% block page_title %}數據分析{% endblock %}
-
-{% block content %}
-<div class="container-fluid px-4">
-    <!-- 時間範圍選擇器 -->
-    <div class="row align-items-center mb-4">
-        <div class="col">
-            <h4 class="mb-0">數據分析</h4>
-        </div>
-        <div class="col-auto">
-            <select class="form-select" id="dateRange">
-                <option value="today" {% if range == 'today' %}selected{% endif %}>今日</option>
-                <option value="week" {% if range == 'week' %}selected{% endif %}>本週</option>
-                <option value="month" {% if range == 'month' %}selected{% endif %}>本月</option>
-                <option value="year" {% if range == 'year' %}selected{% endif %}>今年</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- 統計卡片 -->
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-subtitle mb-2 text-muted">總訂單數</h6>
-                    <h2 class="card-title mb-0">{{ stats.total_orders }}</h2>
-                    <div class="small text-success">
-                        <i class="bx bx-up-arrow-alt"></i> {{ stats.order_growth }}%
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-subtitle mb-2 text-muted">總銷售額</h6>
-                    <h2 class="card-title mb-0">NT$ {{ stats.total_revenue }}</h2>
-                    <div class="small text-success">
-                        <i class="bx bx-up-arrow-alt"></i> {{ stats.revenue_growth }}%
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 圖表區域 -->
-    <div class="row g-4">
-        <div class="col-12 col-lg-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">銷售趨勢</h5>
-                    <canvas id="salesChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">熱門商品</h5>
-                    <canvas id="productsChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 詳細數據表格 -->
-    <div class="card border-0 shadow-sm mt-4">
-        <div class="card-body">
-            <h5 class="card-title">詳細銷售數據</h5>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>商品名稱</th>
-                            <th>銷售數量</th>
-                            <th>銷售額</th>
-                            <th>佔比</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in sales_data %}
-                        <tr>
-                            <td>{{ item.name }}</td>
-                            <td>{{ item.quantity }}</td>
-                            <td>NT$ {{ item.revenue }}</td>
-                            <td>{{ item.percentage }}%</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 銷售趨勢圖
-    const salesCtx = document.getElementById('salesChart').getContext('2d');
-    new Chart(salesCtx, {
-        type: 'line',
-        data: {
-            labels: {{ chart_data.labels|tojson|safe }},
-            datasets: [{
-                label: '銷售額',
-                data: {{ chart_data.sales|tojson|safe }},
-                borderColor: '#4e73df',
-                backgroundColor: 'rgba(78, 115, 223, 0.05)',
-                tension: 0.3,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飲料銷售排行榜</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            position: relative;
         }
-    });
 
-    // 熱門商品圖
-    const productsCtx = document.getElementById('productsChart').getContext('2d');
-    new Chart(productsCtx, {
-        type: 'doughnut',
-        data: {
-            labels: {{ top_products.labels|tojson|safe }},
-            datasets: [{
-                data: {{ top_products.data|tojson|safe }},
-                backgroundColor: [
-                    '#4e73df', '#1cc88a', '#36b9cc',
-                    '#f6c23e', '#e74a3b'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
+        /* 左上角時間顯示 */
+        #current-time, #weather-info, #tomorrow-title, #tomorrow-weather {
+            position: absolute;
+            left: 20px;
+            font-size: 16px;
+            color: #6c757d;
+            font-weight: bold;
         }
-    });
 
-    // 日期範圍切換
-    document.getElementById('dateRange').addEventListener('change', function() {
-        window.location.href = "{{ url_for('analytics') }}?range=" + this.value;
-    });
-});
-</script>
-{% endblock %}
+        #current-time {
+            top: 10px;
+        }
+
+        #weather-info {
+            top: 40px;
+        }
+
+        /* 新增的明日天氣預報標題 */
+        #tomorrow-title {
+            top: 80px;
+            font-size: 15px;
+            color: #495057;
+            font-weight: bold;
+        }
+
+        /* 新增的明日天氣資訊 */
+        #tomorrow-weather {
+            top: 110px;
+        }
+
+        h1.text-primary {
+        margin-top: 100px; /* 調整數值來改變間距 */
+        }
+
+        #chart-container {
+            width: 100%;
+            max-width: 90vw;
+            height: auto;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="container text-center">
+
+    <!-- 顯示現在時間 -->
+    <p id="current-time"></p>
+    <!-- 顯示今天天氣資訊 -->
+    <p id="weather-info">天氣資訊載入中...</p>
+
+    <!-- 明日天氣預報標題 -->
+    <p id="tomorrow-title">📢 明日天氣預報：</p>
+    <!-- 明天天氣資訊 -->
+    <p id="tomorrow-weather">🌤️ 明天天氣載入中...</p>
+
+    <!-- 空白區域 -->
+    <div style="height: 50px;"></div>
+    <div style="height: 50px;"></div>
+    <div style="height: 50px;"></div>
+
+    <!-- 預測銷量按鈕 -->
+    <div class="d-flex align-items-center" style="margin-top: 20px; margin-left: 10px;">
+        <button id="predict-btn" class="btn btn-success">📊 預測明日銷量</button>
+        <span id="prediction-result" class="ms-3 text-danger fw-bold"></span>
+    </div>
+
+    <div style="height: 50px;"></div> <!-- 增加一個 50px 高度的空白區域 -->
+
+
+    <div class="d-flex align-items-center">
+        <h2 class="text-muted me-5 fs-4">🥤 飲料銷售排行榜</h2>
+        <label for="days" class="form-label me-3">請輸入天數：</label>
+        <input type="number" id="days" value="7" min="1" class="form-control" style="max-width: 100px;">
+        <button class="btn btn-success ms-3" onclick="loadChart()">查詢</button>
+    </div>
+
+    <!-- 圖表顯示區 -->
+    <div id="chart-container">
+        <p>請輸入天數後按下按鈕來顯示圖表</p>
+    </div>
+
+    <script>
+        // 更新當前時間
+        function updateTime() {
+            var now = new Date();
+            var formattedTime = now.toLocaleString("zh-TW", { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit'
+            });
+            $("#current-time").text("🕓 現在時間：" + formattedTime);
+        }
+
+        // 更新今天天氣資訊
+        function updateWeather() {
+            $.ajax({
+                url: "/api/weather",
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                    var taichungStation = data.station;
+                    var houliStation = data.location;
+                    var weather = data.weather;
+                    var temperature = data.temperature;
+
+                    var weatherText = `📍 ${taichungStation} → ${houliStation} | 天氣：${weather} | 溫度：${temperature}°C`;
+                    $("#weather-info").text(weatherText);
+                },
+                error: function() {
+                    $("#weather-info").text("天氣資訊載入失敗");
+                }
+            });
+        }
+
+        // 更新明天天氣資訊
+        function updateTomorrowWeather() {
+            $.ajax({
+                url: "/api/tomorrow_weather",
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                    var date = data.date;
+                    var weather = data.weather;
+                    var max_temp = data.max_temp;
+                    var min_temp = data.min_temp;
+
+                    var tomorrowText = `📅 ${date} | 天氣：${weather} | 🌡️ 最高溫：${max_temp}°C | 最低溫：${min_temp}°C`;
+                    $("#tomorrow-weather").text(tomorrowText);
+                },
+                error: function() {
+                    $("#tomorrow-weather").text("🌤️ 明天天氣載入失敗");
+                }
+            });
+        }
+
+        // 載入圖表
+        function loadChart() {
+            var days = $("#days").val();
+
+            $.ajax({
+                url: "/api/sales_chart",
+                type: "GET",
+                data: { days: days },
+                dataType: "html",
+                success: function(response) {
+                    $("#chart-container").html(response);
+                },
+                error: function() {
+                    alert("無法取得數據，請稍後再試");
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            $("#predict-btn").click(function() {
+                $("#prediction-result")
+                    .removeClass("text-danger text-success")
+                    .addClass("text-warning")
+                    .html("📊 預測中...");
+
+                $.ajax({
+                    url: "/api/predict_sales",
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        console.log("Response received:", data); // 記錄 API 回應
+
+                        // **修正變數名稱**
+                        if (!data || !data.daily_total_sales || !data.top_6_drinks) {
+                            $("#prediction-result")
+                                .removeClass("text-warning")
+                                .addClass("text-danger")
+                                .text("❌ 無法獲取預測結果");
+                            return;
+                        }
+
+                        var resultText = `📊 預測總銷量：<strong>${data.daily_total_sales}</strong> 杯<br>🥤 推薦暢銷飲品：<strong>${data.top_6_drinks.join(", ")}</strong>`;
+                        $("#prediction-result")
+                            .removeClass("text-warning text-danger")
+                            .addClass("text-success")
+                            .html(resultText);
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX Error:", status, error, xhr.responseText); // 顯示錯誤細節
+                        $("#prediction-result")
+                            .removeClass("text-warning")
+                            .addClass("text-danger")
+                            .text("❌ 無法獲取預測結果");
+                    }
+                });
+            });
+        });
+
+
+        // 啟動時間 & 天氣更新
+        setInterval(updateTime, 1000);
+        updateTime();
+        setInterval(updateWeather, 300000); // 每 5 分鐘更新一次
+        updateWeather();
+        setInterval(updateTomorrowWeather, 300000); // 每 5 分鐘更新一次
+        updateTomorrowWeather();
+    </script>
+</body>
+</html>
