@@ -1,6 +1,10 @@
 import os
 import sys
 from pathlib import Path
+import eventlet
+
+# 使用 eventlet 修補標準庫
+eventlet.monkey_patch()
 
 # 將專案根目錄和子目錄加入 Python 路徑
 project_root = Path(__file__).parent
@@ -10,12 +14,8 @@ sys.path.append(str(project_root / 'frontend'))
 
 from dotenv import load_dotenv
 from frontend.app import app as frontend_app
-from admin_backend.app import app as admin_app
-from dotenv import load_dotenv
-from frontend.app import app as frontend_app
-from admin_backend.app import app as admin_app
+from admin_backend.app import app as admin_app, socketio
 from threading import Thread
-from werkzeug.serving import run_simple
 import time
 
 # 載入環境變數
@@ -36,17 +36,18 @@ def test_db_connection():
 def run_frontend():
     try:
         print("正在啟動前台系統...")
-        run_simple('localhost', 5002, frontend_app, use_debugger=True, use_reloader=False)
+        # 使用 eventlet 啟動 Flask 應用
+        eventlet.wsgi.server(eventlet.listen(('localhost', 5002)), frontend_app)
     except Exception as e:
         print(f"前台系統啟動失敗: {str(e)}")
 
 def run_backend():
     try:
         print("正在啟動後台系統...")
-        run_simple('localhost', 5003, admin_app, use_debugger=True, use_reloader=False)
+        # 使用 socketio 啟動後台，在主線程中
+        socketio.run(admin_app, host='localhost', port=5003, debug=True, allow_unsafe_werkzeug=True)
     except Exception as e:
         print(f"後台系統啟動失敗: {str(e)}")
-
 
 def load_environment():
     """載入環境變數"""
@@ -86,17 +87,13 @@ if __name__ == '__main__':
     print(f"前台系統將運行於: http://localhost:5002")
     print(f"後台系統將運行於: http://localhost:5003")
     
-    # 建立前後台的執行緒
+    # 先啟動前台
     frontend_thread = Thread(target=run_frontend)
-    backend_thread = Thread(target=run_backend)
-
-    # 設定為 daemon 執行緒，讓主程式結束時自動結束
     frontend_thread.daemon = True
-    backend_thread.daemon = True
-
-    # 啟動執行緒
     frontend_thread.start()
-    backend_thread.start()
+    
+    # 後台直接在主線程運行
+    run_backend()  # 這會阻塞主線程
 
     try:
         # 保持主程式運行

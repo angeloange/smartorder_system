@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from .models import db, Admin, Order, OrderStatus  # 修改為相對導入
-from config import Config
+from .config import Config
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import plotly.express as px
@@ -17,6 +17,7 @@ from weather_API.weather_API import weather_dict, classify_weather, get_weather_
 
 
 
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -46,9 +47,13 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'  # 確保這行存在
 login_manager.login_message = '請先登入'  # 添加中文提示訊息
 
+socketio = SocketIO(cors_allowed_origins="*")
+socketio.init_app(app)
+
 @login_manager.user_loader
 def load_user(user_id):
     return Admin.query.get(int(user_id))
+
 
 # 登入頁面
 @app.route('/login', methods=['GET', 'POST'])
@@ -211,15 +216,102 @@ def update_product_status(product_id):
 @app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
 @login_required
 def update_order_status(order_id):
-    order = Order.query.get_or_404(order_id)
-    data = request.get_json()
-    new_status = data.get('status')
-    
-    if new_status in [status.value for status in OrderStatus]:
+    try:
+        print(f"收到更新訂單狀態請求: 訂單ID={order_id}")
+        order = Order.query.get_or_404(order_id)
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        print(f"嘗試將訂單狀態從 {order.status} 更新為 {new_status}")
+        
+        # 確保所有可能的狀態值都被接受
+        all_statuses = [status.value for status in OrderStatus]
+        print(f"有效的訂單狀態: {all_statuses}")
+        
+        if new_status not in all_statuses:
+            return jsonify({'status': 'error', 'message': f'無效的狀態：{new_status}，有效狀態：{all_statuses}'}), 400
+
+        old_status = order.status
         order.status = new_status
         db.session.commit()
-        return jsonify({'status': 'success'})
-    return jsonify({'status': 'error', 'message': '無效的狀態'}), 400
+        
+        # 計算新的等候時間
+        waiting_time = calculate_waiting_time()
+        print(f"當前等候時間: {waiting_time}分鐘")
+        
+        # 如果訂單狀態更新為已完成，發送訂單完成消息
+        if new_status == OrderStatus.COMPLETED.value:
+            try:
+                # 確保獲取到訂單號碼
+                order_number = getattr(order, 'order_number', None)
+                print(f"訂單號碼: {order_number}")
+                
+                # 如果沒有訂單號碼，使用訂單ID
+                if not order_number:
+                    order_number = f"A{order_id}"
+                    print(f"使用替代訂單號碼: {order_number}")
+                
+                # 提取基本訂單號碼 (處理可能包含 - 的情況)
+                if '-' in order_number:
+                    base_number = order_number.split('-')[0]
+                else:
+                    base_number = order_number
+                
+                # 從基本訂單號碼中提取字母和數字部分
+                if len(base_number) >= 6:  # MMDDA1 格式至少有6位
+                    display_number = base_number[-2:]  # 只取字母和數字
+                else:
+                    display_number = base_number
+                
+                print(f"最終顯示的取餐號碼: {display_number}")
+                
+                # 發送事件
+                socketio.emit('order_completed', {
+                    'order_number': display_number,
+                    'waiting_time': waiting_time
+                })
+                print(f"WebSocket 訊息已發送: 取餐號碼={display_number}, 等候時間={waiting_time}分鐘")
+                        
+            except Exception as e:
+                print(f"發送訂單完成消息失敗: {str(e)}")
+                import traceback
+                traceback.print_exc()
+        else:
+            # 如果不是完成狀態，也發送等候時間更新
+            try:
+                socketio.emit('waiting_time_update', {
+                    'waiting_time': waiting_time
+                })
+                print(f"等候時間已更新：{waiting_time}分鐘")
+            except Exception as e:
+                print(f"發送等候時間更新失敗: {str(e)}")
+        
+        return jsonify({'status': 'success', 'message': '訂單狀態已更新'})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"更新訂單狀態時發生錯誤: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+        
+#添加 API 端點用於初始加載等候時間
+@app.route('/api/waiting-time', methods=['GET'])
+def get_waiting_time():
+    """獲取目前等候時間"""
+    try:
+        waiting_time = calculate_waiting_time()
+        return jsonify({'waiting_time': waiting_time})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+#後台計算等候時間的函數
+def calculate_waiting_time():
+    """計算目前等候時間（僅考慮未完成且未取消的訂單）"""
+    # 只計算待處理和處理中的訂單
+    active_count = Order.query.filter(
+        Order.status.in_([OrderStatus.PENDING.value, OrderStatus.PROCESSING.value])
+    ).count()
+    waiting_minutes = round(active_count * 1.2, 1)  # 四捨五入到小數點後一位
+    return waiting_minutes
 
 # -----數據分析頁面------------------------------------------------------------
 
@@ -505,5 +597,5 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    socketio.run(app, debug=True)

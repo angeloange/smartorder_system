@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
     <script src="{{ url_for('static', filename='js/languages.js') }}"></script>
     <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
     <div class="container">
@@ -69,13 +71,12 @@
             <div class="bottom-info">
                 <div class="info-box">
                     <h3 data-translate="orderNumber">目前取餐號碼</h3>
-                    <div class="number-display">A12</div>
+                    <div class="number-display"></div>
                     <div class="info-text" data-translate="pleaseWait">請保持關注叫號</div>
                 </div>
                 <div class="info-box">
-                    <h3 data-translate="waitingInfo">等候資訊</h3>
-                    <div class="number-display">5</div>
-                    <div class="info-text" data-translate="estimatedTime">預計等待 8 分鐘</div>
+                    <h3 data-translate="waitingTime">目前等候時間</h3>
+                    <div class="waiting-time">-- 分鐘</div>
                 </div>
             </div>
         </div>
@@ -225,7 +226,16 @@
             <!-- 右側底部資訊 -->
             <!-- 修改右側底部資訊區域 -->
             <div class="bottom-info">
-                <div class=                    <h3>熱銷排行</h3>
+                <div class="info-box">
+                    <h3 data-translate="hotSales">熱銷排行</h3>
+                    <div class="rank-list hot-sales">
+                        <!-- 這裡會由 JS 動態填充內容 -->
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h3 data-translate="weatherRecommend">天氣推薦</h3>
+                    <div class="rank-list weather-recommend">
+                        <!-- 這裡會由 JS 動態填充內容 -->
                     </div>
                 </div>
             </div>
@@ -244,5 +254,151 @@
     </div>
     
     <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化 WebSocket 連接
+            const socket = io('http://localhost:5003');  // 後台服務器地址
+            
+            socket.on('connect', () => {
+                console.log('成功連接到 WebSocket 服務器');
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.error('WebSocket 連接錯誤:', error);
+            });
+            
+            // 監聽訂單完成事件
+            socket.on('order_completed', (data) => {
+                console.log('收到訂單完成通知:', data);
+                const numberDisplay = document.querySelector('.number-display');
+                if (numberDisplay) {
+                    numberDisplay.textContent = data.order_number;
+                    // 添加閃爍效果
+                    numberDisplay.classList.add('flash');
+                    setTimeout(() => {
+                        numberDisplay.classList.remove('flash');
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+    <!-- 在底部添加 -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('前台頁面已載入，準備連接 WebSocket...');
+        
+        // 確認 DOM 元素存在
+        const numberDisplay = document.querySelector('.number-display');
+        const waitingTime = document.querySelector('.waiting-time');
+        
+        console.log('取餐號碼元素:', numberDisplay);
+        console.log('等候時間元素:', waitingTime);
+        
+        // 連接 WebSocket
+        const socket = io('http://localhost:5003', {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 10
+        });
+        
+        socket.on('connect', () => {
+            console.log('WebSocket 連接成功，ID:', socket.id);
+        });
+        
+        socket.on('connect_error', (error) => {
+            console.error('WebSocket 連接錯誤:', error);
+        });
+        
+        socket.on('disconnect', (reason) => {
+            console.log('WebSocket 連接斷開:', reason);
+        });
+        
+        // 監聽訂單完成事件
+        socket.on('order_completed', (data) => {
+            console.log('收到訂單完成消息:', data);
+            
+            if (numberDisplay && data.order_number) {
+                console.log('更新取餐號碼:', data.order_number);
+                numberDisplay.textContent = data.order_number;
+                numberDisplay.classList.add('flash');
+                setTimeout(() => {
+                    numberDisplay.classList.remove('flash');
+                }, 2000);
+            }
+            
+            if (waitingTime && data.waiting_time !== undefined) {
+                console.log('更新等候時間:', data.waiting_time);
+                waitingTime.textContent = `${data.waiting_time} 分鐘`;
+                waitingTime.classList.add('flash');
+                setTimeout(() => {
+                    waitingTime.classList.remove('flash');
+                }, 2000);
+            }
+        });
+        
+        // 監聽等候時間更新事件
+        socket.on('waiting_time_update', (data) => {
+            console.log('收到等候時間更新:', data);
+            
+            if (waitingTime && data.waiting_time !== undefined) {
+                console.log('更新等候時間:', data.waiting_time);
+                waitingTime.textContent = `${data.waiting_time} 分鐘`;
+                waitingTime.classList.add('flash');
+                setTimeout(() => {
+                    waitingTime.classList.remove('flash');
+                }, 2000);
+            }
+        });
+    });
+    </script>
+    <script>
+        // 確保這是最後一個加載的腳本，將調用置於文件底部
+        document.addEventListener('DOMContentLoaded', function() {
+            // 等待 1 秒後執行，確保其他所有初始化已完成
+            setTimeout(function() {
+                console.log('開始加載熱銷排行...');
+                // 手動調用更新熱銷排行函數
+                if (typeof updateTopDrinks === 'function') {
+                    updateTopDrinks();
+                } else {
+                    console.error('updateTopDrinks 函數不存在！');
+                    
+                    // 直接在這裡實現熱銷排行功能
+                    async function loadTopDrinks() {
+                        try {
+                            console.log('直接獲取熱銷數據');
+                            const response = await fetch('/monthly_top_drinks');
+                            const result = await response.json();
+                            
+                            console.log('API 回應:', result);
+                            
+                            const container = document.querySelector('.rank-list.hot-sales');
+                            if (container && result.data && result.data.length > 0) {
+                                container.innerHTML = '';
+                                result.data.forEach((item, index) => {
+                                    const div = document.createElement('div');
+                                    div.className = 'rank-item';
+                                    div.textContent = `${index + 1}. ${item.name} (${item.count}杯)`;
+                                    container.appendChild(div);
+                                });
+                            } else {
+                                if (container) {
+                                    container.innerHTML = '<div class="rank-item">暫無熱銷數據</div>';
+                                }
+                            }
+                        } catch (error) {
+                            console.error('直接獲取熱銷數據失敗:', error);
+                            const container = document.querySelector('.rank-list.hot-sales');
+                            if (container) {
+                                container.innerHTML = '<div class="rank-item">載入失敗</div>';
+                            }
+                        }
+                    }
+                    
+                    loadTopDrinks();
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>

@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const textInputMode = document.getElementById('textInputMode');
     const voiceInputMode = document.getElementById('voiceInputMode');
     const langToggle = document.getElementById('langToggle');
+    const waitingTimeElement = document.querySelector('.waiting-time');
     let currentLang = 'zh-TW';
     let isVoiceMode = false;
 
@@ -174,7 +175,70 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // 初始化 WebSocket 連接
+    const socket = io('http://localhost:5003');  // 後台服務器地址
+    
+    socket.on('connect', () => {
+        console.log('Connected to WebSocket server');
+        // 連接後獲取初始等候時間
+        fetchWaitingTime();
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+    });
+    
+    // 監聽訂單完成事件
+    socket.on('order_completed', (data) => {
+        console.log('訂單完成:', data);
+        const numberDisplay = document.querySelector('.number-display');
+        if (numberDisplay) {
+            numberDisplay.textContent = data.order_number;
+            // 添加閃爍效果
+            numberDisplay.classList.add('flash');
+            setTimeout(() => {
+                numberDisplay.classList.remove('flash');
+            }, 2000);
+        }
+        
+        // 更新等候時間
+        if (waitingTimeElement && data.waiting_time !== undefined) {
+            updateWaitingTime(data.waiting_time);
+        }
+    });
+
+    // 接收等候時間更新事件
+    socket.on('waiting_time_update', (data) => {
+        console.log('Waiting time update:', data);
+        if (waitingTimeElement && data.waiting_time !== undefined) {
+            updateWaitingTime(data.waiting_time);
+        }
+    });
+
+    // 更新等候時間顯示
+    function updateWaitingTime(minutes) {
+        waitingTimeElement.textContent = `${minutes} 分鐘`;
+        // 添加動畫效果
+        waitingTimeElement.classList.add('flash');
+        setTimeout(() => {
+            waitingTimeElement.classList.remove('flash');
+        }, 2000);
+    }
+
+    // 獲取初始等候時間
+    function fetchWaitingTime() {
+        fetch('http://localhost:5003/api/waiting-time')
+            .then(response => response.json())
+            .then(data => {
+                if (data.waiting_time !== undefined) {
+                    updateWaitingTime(data.waiting_time);
+                }
+            })
+            .catch(error => console.error('Error fetching waiting time:', error));
+    }
+
     // 確認訂單按鈕
+    // 修改確認訂單按鈕的處理函數
     document.getElementById('confirmOrder').onclick = async () => {
         try {
             const response = await fetch('/confirm_order', {
@@ -190,21 +254,35 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const result = await response.json();
             if (result.status === 'success') {
-                orderDetails.innerHTML = '<div class="success-message">好的，尊貴的客人請稍候，正在為您製作飲品</div>';
-                document.querySelector('.button-group').classList.add('hidden');
-                
-                // 5秒後重置
-                setTimeout(() => {
-                    orderResult.classList.add('hidden');
-                    startOrderBtn.disabled = false;
-                    orderInput.value = '';
-                }, 5000);
+                // 使用 SweetAlert2 顯示成功訊息
+                Swal.fire({
+                    title: '訂單已確認',
+                    html: `
+                        <p>好的，尊貴的客人請稍候</p>
+                        <p>正在為您製作飲品</p>
+                        <p>您的取餐號碼是 <strong>${result.order_number}</strong></p>
+                    `,
+                    icon: 'success',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                }).then(() => {
+                    // 3秒後重置頁面
+                    location.reload();
+                });
+            } else {
+                throw new Error(result.message || '訂單處理失敗');
             }
         } catch (error) {
             console.error('確認訂單時發生錯誤:', error);
+            Swal.fire({
+                title: '錯誤',
+                text: '訂單處理失敗，請稍後再試',
+                icon: 'error',
+                confirmButtonText: '確定'
+            });
         }
     };
-
     // 取消按鈕
     document.getElementById('cancelOrder').onclick = () => {
         orderResult.classList.add('hidden');
@@ -225,32 +303,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 在 DOMContentLoaded 的最後呼叫初始化
     updateTranslations(currentLang);
+
+    // 調用更新熱銷排行
+    console.log('從 menu.js 主要初始化中調用 updateTopDrinks');
+    updateTopDrinks();
 });
 
 async function updateTopDrinks() {
     try {
-        console.log('開始更新熱銷飲料');  // 除錯用
+        console.log('開始更新熱銷飲料');
         const response = await fetch('/monthly_top_drinks');
         const result = await response.json();
         
-        console.log('API 回應:', result);  // 除錯用
+        console.log('熱銷API回應:', result);
         
-        if (result.status === 'success' && result.data.length > 0) {
-            const topDrinksContainer = document.querySelector('.rank-list.hot-sales');            if (topDrinksContainer) {
-                topDrinksContainer.innerHTML = result.data
-                    .map((item, index) => `
-                        <div class="rank-item">
-                            ${index + 1}. ${item.drink_name} (${item.count}杯)
-                        </div>
-                    `).join('');
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+            const topDrinksContainer = document.querySelector('.rank-list.hot-sales');
+            if (topDrinksContainer) {
+                // 清空容器
+                topDrinksContainer.innerHTML = '';
+                
+                // 建立排行項目
+                result.data.forEach((item, index) => {
+                    const rankItem = document.createElement('div');
+                    rankItem.className = 'rank-item';
+                    rankItem.textContent = `${index + 1}. ${item.name || '未知飲品'} (${item.count || 0}杯)`;
+                    
+                    topDrinksContainer.appendChild(rankItem);
+                });
             } else {
                 console.error('找不到熱銷排行容器(.hot-sales)');
             }
         } else {
+            const container = document.querySelector('.rank-list.hot-sales');
+            if (container) {
+                container.innerHTML = '<div class="rank-item">暫無熱銷資料</div>';
+            }
             console.log('沒有熱銷資料或獲取失敗');
         }
     } catch (error) {
         console.error('更新熱銷飲料失敗:', error);
+        const container = document.querySelector('.rank-list.hot-sales');
+        if (container) {
+            container.innerHTML = '<div class="rank-item">資料載入失敗</div>';
+        }
     }
 }
 

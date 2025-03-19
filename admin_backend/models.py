@@ -32,6 +32,7 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    order_number = db.Column(db.String(20))
 
 
     @property
