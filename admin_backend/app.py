@@ -1,15 +1,32 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+import pandas as pd
+import os
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from .models import db, Admin, Order, OrderStatus  # 修改為相對導入
 from config import Config
 from datetime import datetime, timedelta
-import pandas as pd
 from werkzeug.utils import secure_filename
-import os
+import plotly.express as px
 import json
+from codes.db import dbconfig, DB
+from predict.models import Pred_total, Pred_sales
+from predict.total_pred.predict_total_sales import Pred_Total_Sales
+from predict.sales_pred.predict_sales_v4_2 import Pred_Sales
+from weather_API.weather_API import weather_dict, classify_weather, get_weather_data, get_tomorrow_weather
+
+
+
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# 儲存最新的天氣資訊(五分鐘會更新一次)
+latest_weather = {
+     "date": None,
+     "weather": None,
+     "temperature": None
+     }
 
 # 在 Config 類中添加上傳檔案配置
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
@@ -20,6 +37,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # 初始化資料庫
 db.init_app(app)
+db2 = DB(dbconfig())
+
 
 # 初始化登入管理器
 login_manager = LoginManager()
@@ -202,57 +221,157 @@ def update_order_status(order_id):
         return jsonify({'status': 'success'})
     return jsonify({'status': 'error', 'message': '無效的狀態'}), 400
 
-# 數據分析頁面
+# -----數據分析頁面------------------------------------------------------------
+
+def get_sales_ranking(days): ## get_sales_ranking_query
+    #{days}日內所有飲料銷售排名(包含銷售量為0商品)
+    query = """
+         SELECT
+             m.drink_name,
+             COALESCE(COUNT(o.drink_name), 0) AS total_sales
+         FROM menu AS m
+         LEFT JOIN orders AS o
+             ON m.drink_name = o.drink_name
+             AND o.order_date BETWEEN DATE_SUB(CURDATE(), INTERVAL %s DAY) AND CURDATE()
+         GROUP BY m.drink_name
+         ORDER BY total_sales DESC;
+         """
+    db2.connect()
+    db2.execute(query=query, data=(days,))
+    sales = db2.fetchall()
+    # print(f"sales: {sales}")
+    # db2.disconnect()
+    db2.close()
+    sales_dict = {item["drink_name"]: item["total_sales"] for item in sales}
+    # print(f"sales_dict: {sales_dict}")
+    return sales_dict
+
 @app.route('/analytics')
 @login_required
 def analytics():
-    range_type = request.args.get('range', 'today')
-    
-    # 計算日期範圍
-    today = datetime.now().date()
-    if range_type == 'week':
-        start_date = today - timedelta(days=7)
-    elif range_type == 'month':
-        start_date = today.replace(day=1)
-    elif range_type == 'year':
-        start_date = today.replace(month=1, day=1)
-    else:  # today
-        start_date = today
-    
-    # 獲取統計數據
-    stats = {
-        'total_orders': Order.query.filter(Order.order_date >= start_date).count(),
-        'total_revenue': db.session.query(db.func.sum(Order.total_amount))
-            .filter(Order.order_date >= start_date)
-            .scalar() or 0,
-    }
-    
-    # 計算增長率（與前一個時期比較）
-    previous_start = start_date - (today - start_date)
-    previous_orders = Order.query.filter(
-        Order.order_date >= previous_start,
-        Order.order_date < start_date
-    ).count()
-    
-    previous_revenue = db.session.query(db.func.sum(Order.total_amount))\
-        .filter(Order.order_date >= previous_start,
-                Order.order_date < start_date)\
-        .scalar() or 0
-    
-    stats['order_growth'] = calculate_growth(stats['total_orders'], previous_orders)
-    stats['revenue_growth'] = calculate_growth(stats['total_revenue'], previous_revenue)
-    
-    # 獲取銷售趨勢數據
-    trend_data = get_sales_trend(start_date)
-    
-    # 獲取熱門商品數據
-    top_products = get_top_products(start_date)
-    
-    return render_template('analytics.html',
-                         stats=stats,
-                         chart_data=trend_data,
-                         top_products=top_products,
-                         range=range_type)
+    return render_template("analytics.html")  # 這裡載入 analytics.html
+
+
+@app.route("/api/weather", methods=["GET"])
+def weather_api():
+    station, location, weather, temperature = get_weather_data()
+    return jsonify({
+         "station": station,
+         "location": location,
+         "weather": weather,
+         "temperature": temperature
+         })
+
+@app.route("/api/tomorrow_weather", methods=["GET"])
+def tomorrow_weather():
+    weather, max_temp, min_temp, date = get_tomorrow_weather()
+    latest_weather.update({
+                         "date": date,
+                         "weather": classify_weather(weather=weather, weather_dict=weather_dict),
+                         "temperature": round((max_temp + min_temp)/2),
+                         })
+    # print(latest_weather)
+    return jsonify({
+         "date": date,
+         "weather": weather,
+         "max_temp": max_temp,
+         "min_temp": min_temp
+         })
+
+@app.route('/api/predict_sales', methods=['GET'])
+def predict_sales():
+    test_date = latest_weather['date']
+    test_weather = latest_weather['weather']
+    test_temperature = latest_weather['temperature']
+    total_model_filename = "predict/total_pred/sales_total_model_v2_2025_03_18.pkl"
+    # print(f"Model file path: {total_model_filename}")
+    # print(f"1.{test_date} 2.{test_weather} 3.{test_temperature}")
+
+    if not os.path.exists(total_model_filename):
+        # print(f"Error: Model file not found at {total_model_filename}")
+        return jsonify({"error": "Total sales model file not found"}), 500
+
+    sales_model_filename = 'predict/sales_pred/lgbm_drink_weather_model_v4_2025_03_18.pkl'
+    csv_filename = 'predict/new_data/drink_orders_2025_03_18.csv'
+    # print("Creating Pred_total instance...")
+
+    try:
+        pred_total_info = Pred_total(
+            date_string=test_date,
+            weather=test_weather,
+            temperature=test_temperature,
+            model_filename=total_model_filename
+        )
+        predtotal = Pred_Total_Sales(pred_total_info)
+        # print("Calling predtotal.pred()...")
+        daily_total_sales = predtotal.pred()
+        # print(f"Predicted total sales: {daily_total_sales}")
+
+    except Exception as e:
+        # print(f"Error in predtotal.pred(): {e}")
+        return jsonify({"error": f"Prediction total sales failed: {str(e)}"}), 500
+    # print("Creating Pred_sales instance...")
+
+    try:
+        pred_sales_info = Pred_sales(
+            date_string=test_date,
+            weather=test_weather,
+            temperature=test_temperature,
+            daily_total_sales=daily_total_sales,
+            model_filename=sales_model_filename,
+            csv_filename=csv_filename
+        )
+
+        predsales = Pred_Sales(pred_sales_info)
+        # print("Calling predsales.get_top_6_sales_by_condition()...")
+        weather_recommend = predsales.get_top_6_sales_by_condition()
+        # print(f"Top 6 recommended drinks: {weather_recommend}")
+
+    except Exception as e:
+        print(f"Error in predsales.get_top_6_sales_by_condition(): {e}")
+        return jsonify({"error": f"Prediction sales recommendation failed: {str(e)}"}), 500
+
+    return jsonify({
+        "daily_total_sales": daily_total_sales,
+        "top_6_drinks": weather_recommend
+    })
+
+@app.route('/api/sales_chart')
+def sales_chart():
+    days = request.args.get("days", default=7, type=int)  # 取得輸入的天數
+    sales_data = get_sales_ranking(days)
+    # print(f"sales_data: {sales_data}")
+    # 轉換為 DataFrame，確保所有品項都存在
+    df = pd.DataFrame({'飲料名稱': list(sales_data.keys()), '銷量': list(sales_data.values())})
+
+    df["銷量"] = pd.to_numeric(df["銷量"], errors="coerce").fillna(0).astype(int)
+    # print(df["銷量"].describe())  # 看看是否範圍跑掉
+    # print(df["銷量"].dtype)  # 確認資料型態
+
+    df = df.sort_values(by="銷量", ascending=True)  # 銷量小的在最下方（橫向條狀圖）
+    # print(df.columns)  # 應該輸出 Index(['飲料名稱', '銷量'], dtype='object')
+    # print(df.dtypes)
+
+    # 產生長條圖
+    min_height = 300
+    fig = px.bar(df, x="銷量", y="飲料名稱", orientation='h', 
+                 title=f"過去 {days} 天的飲料銷售排名", color="銷量", 
+                 height=max(min_height, 25 * len(df)))
+
+    fig.update_layout(
+        autosize=True,
+        width=1200,  # 加寬圖形
+        height=max(min_height, 25 * len(df)),  # 讓圖保持一定高度
+        margin=dict(l=150, r=50, t=50, b=50),
+        yaxis=dict(title="飲料名稱", tickfont=dict(size=14)),
+        xaxis=dict(title="銷量", tickfont=dict(size=14))
+    )
+
+    graph_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
+
+    return Response(graph_html, mimetype="text/html")  # 回傳完整 HTML
+
+#---數據分析頁面-以上--
 
 def calculate_growth(current, previous):
     if previous == 0:
@@ -386,5 +505,5 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)

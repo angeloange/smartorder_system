@@ -35,7 +35,7 @@ class DB:
                 database=self.database
             )
             if self.conn.is_connected():
-                    print(f"資料庫: {self.database} 連線成功")
+                    print(f"資料庫: {self.database} 連線成功666")
                     self.cursor = self.conn.cursor()
         except Error as e:
             print(f"資料庫錯誤: {e}")
@@ -48,18 +48,40 @@ class DB:
             self.conn.close()
             print('資料庫關閉連線')
 
+    # def execute(self, query: str, data: tuple = None):
+    #     if self.conn and self.cursor:
+    #         try:
+    #             self.cursor.execute(query, data)
+    #             self.conn.commit()
+    #             return self.cursor.fetchall()  # 如果是查詢資料會返回結果
+    #         except Exception as e:
+    #             print(f"execute錯誤: {e}")
+    #             return None
+    #     else:
+    #         print("資料庫尚未連線")
+    #         return None
+    
     def execute(self, query: str, data: tuple = None):
         if self.conn and self.cursor:
             try:
-                self.cursor.execute(query, data)
-                self.conn.commit()
-                return self.cursor.fetchall()  # 如果是查詢資料會返回結果
+                if data:
+                    self.cursor.execute(query, data)
+                else:
+                    self.cursor.execute(query)
+
+                if self.cursor.description:  # 只有 SELECT 會有 description
+                    result = self.cursor.fetchall()
+                else:
+                    self.conn.commit()
+                    result = None  # 非查詢類 SQL 沒有回傳結果
+
+                return result
+
             except Exception as e:
-                print(f"execute錯誤: {e}")
+                print(f"execute 錯誤: {e}")
                 return None
         else:
             print("資料庫尚未連線")
             return None
-
     def roll_back(self):
         self.conn.rollback()
