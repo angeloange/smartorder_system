@@ -452,9 +452,9 @@ def sales_chart():
 
     fig.update_layout(
         autosize=True,
-        width=1200,  # 加寬圖形
+        width=950,  # 加寬圖形
         height=max(min_height, 25 * len(df)),  # 讓圖保持一定高度
-        margin=dict(l=150, r=50, t=50, b=50),
+        margin=dict(l=20, r=20, t=50, b=50),
         yaxis=dict(title="飲料名稱", tickfont=dict(size=14)),
         xaxis=dict(title="銷量", tickfont=dict(size=14))
     )
