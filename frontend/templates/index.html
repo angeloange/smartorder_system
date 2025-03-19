@@ -20,6 +20,13 @@
                 <div class="chat-header">
                     <h3>智慧點餐助手</h3>
                 </div>
+                
+                <!-- 修改虛擬助手顯示區 -->
+                <div class="virtual-assistant-display">
+                    <img id="assistantIdle" src="{{ url_for('static', filename='images/stfu.png') }}" class="assistant-image active">
+                    <img id="assistantSpeaking" src="{{ url_for('static', filename='images/speaking.gif') }}" class="assistant-image">
+                </div>
+                
                 <div class="chat-messages" id="chatMessages">
                     <!-- 對話內容會動態添加在這裡 -->
                 </div>
@@ -27,7 +34,7 @@
                     <button id="chatVoiceBtn" class="voice-btn">
                         <i class="fas fa-microphone"></i>
                     </button>
-                    <input type="text" id="chatInput" placeholder="請輸入您想點的飲料...">
+                    <input type="text" id="chatInput" placeholder="請輸入您的訂單...">
                     <button id="chatSendBtn">發送</button>
                 </div>
             </div>

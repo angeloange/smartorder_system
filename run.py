@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 import eventlet
+from flask_socketio import SocketIO  # 添加這行來導入 SocketIO 類
 
 # 使用 eventlet 修補標準庫
 eventlet.monkey_patch()
@@ -17,9 +18,21 @@ from frontend.app import app as frontend_app
 from admin_backend.app import app as admin_app, socketio
 from threading import Thread
 import time
+from flask_cors import CORS  # 移到頂部
 
 # 載入環境變數
 load_dotenv()
+
+# 直接使用從 admin_backend.app 導入的 socketio 實例
+# 不要重新創建 socketio 實例
+# 只需配置現有的 socketio 實例
+socketio.cors_allowed_origins = "*"
+socketio.ping_timeout = 30
+socketio.ping_interval = 15
+
+# 確保 Flask 應用設置了正確的 CORS 配置
+CORS(admin_app, resources={r"/*": {"origins": "*"}})
+CORS(frontend_app, resources={r"/*": {"origins": "*"}})
 
 def test_db_connection():
     """測試資料庫連接"""
