@@ -6,10 +6,13 @@ from datetime import datetime
 from enum import Enum
 import speech_recognition as sr
 from pydub import AudioSegment
-
 from codes.db import DB, dbconfig
+from predict.models import Pred_total, Pred_sales
+from predict.total_pred.predict_total_sales import Pred_Total_Sales
+from predict.sales_pred.predict_sales_v4_2 import Pred_Sales
 from tools.tools import convert_order_date_for_db, get_now_time
 from .order_analyzer import OrderAnalyzer
+from weather_API.weather_API import weather_dict ,classify_weather, get_weather_data
 
 # 初始化 Flask 應用
 app = Flask(__name__)
@@ -157,6 +160,65 @@ def monthly_top_drinks():
                 {'name': '尚無資料', 'count': 0}
             ]
         })
+
+@app.route('/api/weather_recommend', methods=['GET'])
+def weather_recommend():
+    station, location, weather, temperature = get_weather_data()
+    date = str(datetime.now().date())
+
+    test_date = date
+    test_weather = classify_weather(weather=weather, weather_dict=weather_dict)
+    test_temperature = int(temperature)
+    total_model_filename = "predict/total_pred/sales_total_model_v2_2025_03_18.pkl"
+    # print(f"Model file path: {total_model_filename}")
+    # print(f"1.{test_date} 2.{test_weather} 3.{test_temperature}")
+
+    if not os.path.exists(total_model_filename):
+        # print(f"Error: Model file not found at {total_model_filename}")
+        return jsonify({"error": "Total sales model file not found"}), 500
+
+    sales_model_filename = 'predict/sales_pred/lgbm_drink_weather_model_v4_2025_03_18.pkl'
+    csv_filename = 'predict/new_data/drink_orders_2025_03_18.csv'
+    # print("Creating Pred_total instance...")
+
+    try:
+        pred_total_info = Pred_total(
+            date_string=test_date,
+            weather=test_weather,
+            temperature=test_temperature,
+            model_filename=total_model_filename
+        )
+        predtotal = Pred_Total_Sales(pred_total_info)
+        # print("Calling predtotal.pred()...")
+        daily_total_sales = predtotal.pred()
+        # print(f"Predicted total sales: {daily_total_sales}")
+
+    except Exception as e:
+        # print(f"Error in predtotal.pred(): {e}")
+        return jsonify({"error": f"Prediction total sales failed: {str(e)}"}), 500
+    # print("Creating Pred_sales instance...")
+
+    try:
+        pred_sales_info = Pred_sales(
+            date_string=test_date,
+            weather=test_weather,
+            temperature=test_temperature,
+            daily_total_sales=daily_total_sales,
+            model_filename=sales_model_filename,
+            csv_filename=csv_filename
+        )
+
+        predsales = Pred_Sales(pred_sales_info)
+        # print("Calling predsales.get_top_6_sales_by_condition()...")
+        weather_recommend = predsales.get_top_6_sales_by_condition()
+        # print(f"Top 6 recommended drinks: {weather_recommend}")
+
+    except Exception as e:
+        print(f"Error in predsales.get_top_6_sales_by_condition(): {e}")
+        return jsonify({"error": f"Prediction sales recommendation failed: {str(e)}"}), 500
+
+    return jsonify(weather_recommend)
+
 
 def get_last_order_number(db_instance):
     """獲取今天最後一筆訂單號碼"""

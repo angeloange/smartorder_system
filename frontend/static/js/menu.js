@@ -350,6 +350,55 @@ async function updateTopDrinks() {
     }
 }
 
+async function updateWeatherRecommendations() {
+    try {
+        console.log('開始更新天氣推薦菜單');
+        
+        // 向 API 發送請求
+        const response = await fetch('/api/weather_recommend'); 
+        const result = await response.json();
+        
+        console.log('天氣推薦API回應:', result);
+        
+        if (result && result.length >= 6) {
+            const weatherContainer = document.querySelector('.rank-list.weather-recommend');
+            if (weatherContainer) {
+                weatherContainer.innerHTML = '';  // 清空原本內容
+
+                // 取第 4~6 名的飲料
+                const selectedDrinks = result?.slice(3, 6) || [];
+
+                selectedDrinks.forEach((drink, index) => {
+                    const rankItem = document.createElement('div');
+                    rankItem.className = 'rank-item';
+                    rankItem.textContent = `${index + 1}. ${drink}`;
+
+                    weatherContainer.appendChild(rankItem);
+                });
+            } else {
+                console.error('找不到天氣推薦排行容器(.weather-recommend)');
+            }
+        } else {
+            const container = document.querySelector('.rank-list.weather-recommend');
+            if (container) {
+                container.innerHTML = '<div class="rank-item">暫無天氣推薦資料</div>';
+            }
+            console.log('天氣推薦資料不足或獲取失敗');
+        }
+    } catch (error) {
+        console.error('更新天氣推薦菜單失敗:', error);
+        const container = document.querySelector('.rank-list.weather-recommend');
+        if (container) {
+            container.innerHTML = '<div class="rank-item">資料載入失敗</div>';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateWeatherRecommendations();
+    setInterval(updateWeatherRecommendations, 30 * 60 * 1000);  // 30 分鐘更新一次
+});
+
 function displayOrder(orderDetails, speechText) {
     const container = document.getElementById('orderDetails');
     container.innerHTML = '';
