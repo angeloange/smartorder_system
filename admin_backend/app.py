@@ -597,5 +597,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+
+
 if __name__ == '__main__':
     socketio.run(app, debug=True)

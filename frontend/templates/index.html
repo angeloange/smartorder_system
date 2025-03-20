@@ -9,64 +9,84 @@
     <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
 </head>
 <body>
     <div class="container">
         <!-- 左側面板 -->
         <div class="interaction-panel">
-            <div id="virtualAvatar" class="virtual-avatar hidden">
-                <!-- 這裡放置虛擬人物的容器 -->
-                <div class="avatar-container">
-                    <canvas id="avatarCanvas"></canvas>
+            <!-- 虛擬助手區域 -->
+            <div class="chat-interface">
+                <div class="chat-header">
+                    <h3>智慧點餐助手</h3>
                 </div>
-                <div class="speech-bubble hidden">
-                    <!-- 虛擬人物的對話框 -->
-                </div>
-            </div>
-            <div class="panel-content">
-                <h2 data-translate="title">智慧點餐專員</h2>
                 
-                <!-- 在點餐輸入區域修改 -->
-                <div class="order-input-section">
-                    <div class="input-mode-switch">
+                <!-- 修改虛擬助手顯示區 -->
+                <div class="virtual-assistant-display">
+                    <img id="assistantIdle" src="{{ url_for('static', filename='images/stfu.png') }}" class="assistant-image active">
+                    <img id="assistantSpeaking" src="{{ url_for('static', filename='images/speaking.gif') }}" class="assistant-image">
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <!-- 對話內容會動態添加在這裡 -->
+                </div>
+                <div class="chat-input-area">
+                    <button id="chatVoiceBtn" class="voice-btn">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <input type="text" id="chatInput" placeholder="請輸入您的訂單...">
+                    <button id="chatSendBtn">發送</button>
+                </div>
+            </div>
+
+            <!-- 保留原有的點餐介面，但先隱藏 -->
+            <div id="traditionalOrderInterface" class="hidden">
+                <!-- 原有的點餐介面內容 -->
+                <div class="panel-content">
+                    <h2 data-translate="title">智慧點餐專員</h2>
+                    
+                    <!-- 在點餐輸入區域修改 -->
+                    <div class="order-input-section">
+                        <div class="input-mode-switch">
                         <button id="textModeBtn" class="mode-btn active">文字輸入</button>
-                        <button id="voiceModeBtn" class="mode-btn">語音輸入</button>
-                    </div>
-                    <div id="orderPrompt" class="order-prompt hidden">
-                        <div class="status-message preparing hidden">請稍候，正在準備錄音...</div>
-                        <div class="status-message recording hidden">請開始點餐（5秒）</div>
-                        <div class="status-message processing hidden">正在處理語音辨識...</div>
-                        <div class="status-message analyzing hidden">正在分析您的訂單...</div>
-                    </div>
-                    <!-- 文字輸入模式 -->
-                    <div id="textInputMode">
+                            <button id="voiceModeBtn" class="mode-btn">語音輸入</button>
+                        </div>
+                        <div id="orderPrompt" class="order-prompt hidden">
+                            <div class="status-message preparing hidden">請稍候，正在準備錄音...</div>
+                            <div class="status-message recording hidden">請開始點餐（5秒）</div>
+                            <div class="status-message processing hidden">正在處理語音辨識...</div>
+                            <div class="status-message analyzing hidden">正在分析您的訂單...</div>
+                        </div>
+                        <!-- 文字輸入模式 -->
+                        <div id="textInputMode">
                         <input type="text" id="orderInput" class="order-input" 
-                            data-translate="placeholder" placeholder="例：我要一杯大杯冰綠茶，全糖微冰" />
+                                data-translate="placeholder" placeholder="例：我要一杯大杯冰綠茶，全糖微冰" />
+                        </div>
+                        
+                        <!-- 語音輸入模式 -->
+                        <div id="voiceInputMode" class="hidden">
+                            <div class="voice-status">按下開始點餐進行錄音</div>
+                        </div>
+                        
+                        <button id="startOrder" class="btn-primary" data-translate="startOrder">開始點餐</button>
                     </div>
-                    
-                    <!-- 語音輸入模式 -->
-                    <div id="voiceInputMode" class="hidden">
-                        <div class="voice-status">按下開始點餐進行錄音</div>
+
+                    <!-- 訂單處理提示 -->
+                    <div id="orderPrompt" class="order-prompt hidden">
+                        <p data-translate="processing">正在處理您的訂單...</p>
                     </div>
-                    
-                    <button id="startOrder" class="btn-primary" data-translate="startOrder">開始點餐</button>
-                </div>
 
-                <!-- 訂單處理提示 -->
-                <div id="orderPrompt" class="order-prompt hidden">
-                    <p data-translate="processing">正在處理您的訂單...</p>
-                </div>
-
-                <!-- 訂單確認區域 -->
-                <div id="orderResult" class="order-result hidden">
-                    <div id="orderDetails" class="order-details"></div>
-                    <div class="button-group">
+                    <!-- 訂單確認區域 -->
+                    <div id="orderResult" class="order-result hidden">
+                        <div id="orderDetails" class="order-details"></div>
+                        <div class="button-group">
                         <button id="confirmOrder" class="btn-confirm" data-translate="confirm">確認訂單</button>
-                        <button id="cancelOrder" class="btn-cancel" data-translate="cancel">取消</button>
+                            <button id="cancelOrder" class="btn-cancel" data-translate="cancel">取消</button>
+                        </div>
                     </div>
                 </div>
             </div>
-            
+
             <!-- 左側底部的兩個框框 -->
             <div class="bottom-info">
                 <div class="info-box">
