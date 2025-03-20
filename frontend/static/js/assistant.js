@@ -293,9 +293,47 @@ class VirtualAssistant {
     }
     
     // 設置虛擬助手狀態
-    setAssistantState(state) {
-        // 只在狀態真正變化時才執行切換，避免不必要的圖片重載
-        const currentState = state === 'speaking' ? 'speaking' : 'idle';
+// 找到 setAssistantState 方法並修改
+setAssistantState(state) {
+    // 只在狀態真正變化時才執行切換
+    const currentState = state === 'speaking' ? 'speaking' : 'idle';
+    
+    try {
+        // 控制 Live2D 模型狀態
+        const waifuElement = document.querySelector('#waifu');
+        if (waifuElement) {
+            if (currentState === 'speaking') {
+                waifuElement.setAttribute('data-speaking', 'true');
+                
+                // 顯示提示框
+                const waifuTips = document.getElementById('waifu-tips');
+                if (waifuTips) {
+                    waifuTips.innerHTML = '我在聽著呢！';
+                    waifuTips.style.opacity = 1;
+                    setTimeout(() => {
+                        waifuTips.style.opacity = 0;
+                    }, 3000);
+                }
+                
+                // 觸發說話動作
+                if (typeof window.showLive2DMotion === 'function') {
+                    window.showLive2DMotion('tap');
+                }
+            } else {
+                waifuElement.setAttribute('data-speaking', 'false');
+                
+                // 觸發閒置動作
+                if (typeof window.showLive2DMotion === 'function') {
+                    window.showLive2DMotion('idle');
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Live2D 控制錯誤:', e);
+        
+        // 如果發生錯誤，可以考慮回退到原始的圖片方案
+        // 取消註釋下方代碼即可啟用原始方案
+        /*
         const currentActiveId = document.querySelector('.assistant-image.active')?.id;
         const targetId = currentState === 'speaking' ? 'assistantSpeaking' : 'assistantIdle';
         
@@ -309,7 +347,11 @@ class VirtualAssistant {
         
         // 設置新狀態
         document.getElementById(targetId).classList.add('active');
+        */
     }
+}
+
+
     // 添加消息的方法 - 移除之前的延遲計算，使用語音事件控制
     async addMessage(type, content) {
         const messageDiv = document.createElement('div');

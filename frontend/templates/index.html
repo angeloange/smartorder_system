@@ -10,6 +10,32 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/waifu.css">
+    <script src="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/waifu-tips.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/live2d-widget-model-shizuku@1.0.5/assets/shizuku.model.json"></script>
+    
+    <!-- 引入 Live2D 庫 -->
+    
+    <!-- Live2D 相關設定 -->
+    <script>
+        // Live2D 設定
+        window.live2d_settings = {
+            modelAPI: 'https://live2d.fghrsh.net/api/',
+            modelId: 2,                    // 模型ID (可以根據需要調整)
+            modelTexturesId: 1,            // 材質ID
+            waifuSize: '220x220',          // 模型大小
+            waifuTipsSize: '180x70',       // 提示框大小
+            waifuFontSize: '12px',         // 字體大小
+            showToolMenu: false,           // 隱藏工具選單
+            canSwitchModel: true,         // 禁止切換模型
+            canSwitchTextures: true,      // 禁止切換材質
+            waifuEdgeSide: 'left:0',       // 位置調整
+            waifuDraggable: 'disable',     // 禁止拖拽
+            homePageUrl: '/',              // 主頁連結
+            hitokoto: false,               // 不顯示一言
+            debug: false,                  // 關閉除錯輸出
+        };
+    </script>
 </head>
 <body>
     <div class="container">
@@ -23,8 +49,17 @@
                 
                 <!-- 修改虛擬助手顯示區 -->
                 <div class="virtual-assistant-display">
+                    <!-- 將原本的圖片註釋掉，但保留以備不時之需 -->
+                    <!-- 
                     <img id="assistantIdle" src="{{ url_for('static', filename='images/stfu.png') }}" class="assistant-image active">
                     <img id="assistantSpeaking" src="{{ url_for('static', filename='images/speaking.gif') }}" class="assistant-image">
+                    -->
+                    
+                    <!-- 添加 Live2D 容器 -->
+                    <div id="waifu" class="live2d-container">
+                        <div id="waifu-tips"></div>
+                        <canvas id="live2d" width="220" height="220"></canvas>
+                    </div>
                 </div>
                 
                 <div class="chat-messages" id="chatMessages">
@@ -420,5 +455,51 @@
             }, 1000);
         });
     </script>
+    <!-- 添加到 index.html 底部 body 標籤前 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 移除任何已經自動生成的 waifu 元素
+            const existingWaifu = document.querySelector('body > #waifu');
+            if (existingWaifu) {
+                existingWaifu.remove();
+            }
+            
+            // 使用我們自己的容器
+            const waifuContainer = document.querySelector('.virtual-assistant-display #waifu');
+            
+            // 手動初始化 live2d
+            if (typeof loadlive2d === 'function') {
+                // 確保容器可見並正確定位
+                if (waifuContainer) {
+                    waifuContainer.style.position = 'relative';
+                    waifuContainer.style.zIndex = '10';
+                    
+                    // 初始化模型
+                    loadlive2d(
+                        "live2d", 
+                        `https://live2d.fghrsh.net/api/get/?id=${window.live2d_settings.modelId}&textures=${window.live2d_settings.modelTexturesId}`,
+                        console.log('Live2D 模型加載完成')
+                    );
+                    
+                    console.log('Live2D 初始化完成到我們的容器');
+                } else {
+                    console.error('找不到 Live2D 容器!');
+                }
+            } else {
+                console.error('loadlive2d 函數未定義!');
+                // 嘗試加載 live2d.min.js
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/live2d.min.js';
+                document.head.appendChild(script);
+                
+                script.onload = function() {
+                    if (typeof loadlive2d === 'function' && waifuContainer) {
+                        loadlive2d("live2d", `https://live2d.fghrsh.net/api/get/?id=${window.live2d_settings.modelId}`);
+                    }
+                };
+            }
+        });
+    </script>
+
 </body>
 </html>

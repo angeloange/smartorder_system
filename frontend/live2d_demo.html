@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live2D 展示頁面</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .model-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+        #live2d-widget {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 300px;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Live2D 模型展示</h1>
+        <p>下方顯示一個簡單的 Live2D 模型</p>
+        <div class="model-container">
+            <div id="live2d-widget"></div>
+        </div>
+    </div>
+
+    <!-- 引入 Live2D 庫 -->
+    <script src="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/autoload.js"></script>
+    
+    <script>
+        // 可選配置
+        window.live2d_settings = {
+            // 模型設定
+            modelAPI: 'https://live2d.fghrsh.net/api/',
+            modelId: 1,                    // 使用的模型ID
+            modelTexturesId: 1,            // 使用的材質ID
+            
+            // 一般設定
+            showToolMenu: true,            // 顯示工具選單
+            canSwitchModel: true,          // 允許切換模型
+            canSwitchTextures: true,       // 允許切換材質
+            hitokoto: true,                // 顯示一言
+            
+            // 位置調整
+            waifuSize: '280x250',          // 設定模型大小
+            waifuTipsSize: '250x70',       // 提示框大小
+            waifuFontSize: '12px',         // 字體大小
+            windowWidth: 768,              // 視窗寬度 (Mobile: < 768)
+            
+            // 其他選項
+            debug: false,                  // 額外的控制台輸出
+            verbose: false,                // 詳細輸出
+        };
+    </script>
+</body>
+</html>
