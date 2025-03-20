@@ -10,6 +10,9 @@ from pydub import AudioSegment
 from codes.db import DB, dbconfig
 from tools.tools import convert_order_date_for_db, get_now_time
 from .order_analyzer import OrderAnalyzer
+from flask_socketio import SocketIO  # 添加這行
+
+
 
 # 初始化 Flask 應用
 app = Flask(__name__)
@@ -19,6 +22,10 @@ db = DB(dbconfig())
 
 # 初始化訂單分析器
 analyzer = OrderAnalyzer()
+
+socketio = SocketIO(cors_allowed_origins="*")
+socketio.init_app(app)
+
 
 # 定義 Enum 類型
 class Size(Enum):
@@ -175,103 +182,154 @@ def get_last_order_number(db_instance):
     except Exception as e:
         print(f"獲取最後訂單號碼時發生錯誤: {str(e)}")
         return None
-
 def generate_order_number(db, count=1):
-    """生成新的訂單號碼（MMDDA1-MMDDZ9）"""
-    today = datetime.now().strftime('%m%d')
-    last_number = get_last_order_number(db)
+    """生成新的訂單號碼，確保唯一性"""
+    import random
+    import time
     
-    # 基本訂單號碼
-    if not last_number:
-        base_number = f'{today}A1'  # 當天第一筆訂單
-    else:
-        # 從完整訂單號碼中提取字母和數字
-        if '-' in last_number:
-            base_last = last_number.split('-')[0]
-        else:
-            base_last = last_number
-            
-        letter = base_last[-2]  # 倒數第二個字符（字母）
-        number = int(base_last[-1])  # 最後一個字符（數字）
-        
-        if number < 9:
-            base_number = f'{today}{letter}{number + 1}'
-        else:
-            next_letter = chr(ord(letter) + 1) if letter != 'Z' else 'A'
-            base_number = f'{today}{next_letter}1'
+    today = datetime.now().strftime('%m%d')
     
     # 生成所有訂單號碼
     order_numbers = []
+    max_attempts = 5
+    
     for i in range(count):
-        if i == 0:
-            order_numbers.append(base_number)
-        else:
-            # 使用連字號+序號，避免衝突
-            order_numbers.append(f"{base_number}-{i+1}")
+        # 在每個循環中重新查詢最後訂單號，確保最新
+        last_number = get_last_order_number(db)
+        attempts = 0
+        
+        while attempts < max_attempts:
+            # 基本號碼生成邏輯
+            if not last_number:
+                letter = chr(65 + random.randint(0, 25))  # A-Z隨機一個字母
+                number = random.randint(1, 9)  # 1-9隨機一個數字
+                base_number = f'{today}{letter}{number}'
+            else:
+                # 從完整訂單號碼中提取字母和數字
+                if '-' in last_number:
+                    base_last = last_number.split('-')[0]
+                else:
+                    base_last = last_number
+                    
+                # 提取字母和數字部分，但增加隨機性
+                letter = chr(65 + random.randint(0, 25))  # 隨機字母代替遞增
+                number = random.randint(1, 9)  # 隨機數字
+                base_number = f'{today}{letter}{number}'
+            
+            # 添加時間戳微秒部分作為唯一標識
+            unique_suffix = str(int(time.time() * 1000) % 10000)
+            new_number = f"{base_number}-{unique_suffix}"
+            
+            # 檢查訂單號是否已存在
+            query = "SELECT 1 FROM orders WHERE order_number = %s LIMIT 1"
+            result = db.fetchone(query, (new_number,))
+            
+            if not result:
+                # 訂單號不存在，可以使用
+                order_numbers.append(new_number)
+                break
+                
+            attempts += 1
+            # 短暫延遲以避免時間戳完全相同
+            time.sleep(0.01)
+        
+        if attempts >= max_attempts:
+            # 如果嘗試多次仍失敗，使用更長的隨機字符串
+            fallback = f"{today}{chr(65 + random.randint(0, 25))}{random.randint(1, 9)}-{str(uuid.uuid4())[:8]}"
+            order_numbers.append(fallback)
     
     return order_numbers
-
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
     try:
-        data = request.get_json()
+        data = request.json
         order_details = data.get('order_details', [])
         
-        # 展開訂單項目，處理相同品項多杯的情況
+        if not order_details:
+            return jsonify({'status': 'error', 'message': '訂單不能為空'})
+        
+        # 展開訂單項目
         expanded_orders = []
         for order in order_details:
-            # 獲取數量，預設為1
             quantity = order.get('quantity', 1)
-            
-            # 根據數量複製訂單項目
             for i in range(quantity):
-                # 創建新的訂單項目，但不包含 quantity
                 order_item = {k: v for k, v in order.items() if k != 'quantity'}
                 expanded_orders.append(order_item)
         
-        # 生成足夠數量的訂單號碼
+        # 生成訂單號碼
+        from codes.db import DB, dbconfig
+        db = DB(dbconfig())
         order_numbers = generate_order_number(db, len(expanded_orders))
-        if not order_numbers:
-            raise Exception("無法生成訂單號碼")
         
-        # 取得當前時間和天氣資訊
-        order_date, order_time = get_now_time()
+        if not order_numbers:
+            return jsonify({'status': 'error', 'message': '無法生成訂單號碼'})
+        
+        # 獲取當前時間和天氣
+        now = datetime.now()
+        order_date = now.date()
+        order_time = now.strftime('%H:%M:%S')
         
         success_count = 0
+        failed_orders = []
         
         for i, order in enumerate(expanded_orders):
             try:
-                query = """
-                    INSERT INTO orders (
-                        drink_name, size, ice_type, sugar_type, 
-                        order_date, order_time, 
-                        weather_status, temperature,
-                        status, created_at, order_number
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s)
-                """
-                values = (
-                    order['drink_name'], order['size'],
-                    order['ice'], order['sugar'],
-                    order_date, order_time,
-                    'sunny', 25.0,
-                    'pending', order_numbers[i]
-                )
-                
-                print(f"準備插入訂單，值為: {values}")
-                if db.execute(query, values):
-                    success_count += 1
-                else:
-                    print(f"插入訂單失敗: {values}")
+                # 嘗試3次插入，避免訂單號衝突
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        query = """
+                            INSERT INTO orders (
+                                drink_name, size, ice_type, sugar_type, 
+                                order_date, order_time, 
+                                weather_status, temperature,
+                                status, created_at, order_number
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s)
+                        """
+                        values = (
+                            order.get('drink_name', '未知飲品'), 
+                            order.get('size', '中杯'),
+                            order.get('ice', '正常冰'), 
+                            order.get('sugar', '全糖'),
+                            order_date, order_time,
+                            'sunny', 25.0,
+                            'pending', order_numbers[i]
+                        )
+                        
+                        print(f"準備插入訂單，值為: {values}")
+                        if db.execute(query, values):
+                            success_count += 1
+                            break  # 成功就跳出重試循環
+                        else:
+                            print(f"插入訂單失敗: {values}")
+                            # 如果不是最後一次嘗試，重新生成訂單號
+                            if attempt < max_retries - 1:
+                                new_numbers = generate_order_number(db, 1)
+                                if new_numbers:
+                                    order_numbers[i] = new_numbers[0]
+                    except Exception as e:
+                        print(f"嘗試 #{attempt+1} 插入訂單失敗: {str(e)}")
+                        if 'Duplicate entry' in str(e) and attempt < max_retries - 1:
+                            # 如果是重複錯誤且不是最後一次嘗試，重新生成訂單號
+                            new_numbers = generate_order_number(db, 1)
+                            if new_numbers:
+                                order_numbers[i] = new_numbers[0]
+                        else:
+                            raise  # 重新拋出其他錯誤或最後一次嘗試的錯誤
             except Exception as e:
                 print(f"插入單筆訂單時發生錯誤: {str(e)}")
+                failed_orders.append(order)
         
         if success_count == 0:
-            raise Exception("所有訂單儲存失敗")
+            return jsonify({
+                'status': 'error',
+                'message': '所有訂單儲存失敗'
+            })
             
         return jsonify({
             'status': 'success',
             'message': f'成功建立 {success_count}/{len(expanded_orders)} 筆訂單',
-            'order_number': order_numbers[0][-2:]  # 只返回第一杯飲料號碼的最後兩位
+            'order_number': order_numbers[0].split('-')[0][-2:]  # 只返回第一杯飲料號碼的最後兩位
         })
 
     except Exception as e:
@@ -280,7 +338,6 @@ def confirm_order():
             'status': 'error',
             'message': '訂單處理失敗'
         })
-
 
 if __name__ == '__main__':
     app.run(debug=True)
