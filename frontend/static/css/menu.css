@@ -554,14 +554,15 @@ body {
 /* 虛擬助手顯示區樣式 */
 /* 添加到 menu.css */
 .virtual-assistant-display {
-    width: 200px;
-    height: 200px;
     position: relative;
-    margin: 0 auto 15px;
-    border-radius: 10px;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 20px;
     overflow: hidden;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
 }
-
 /* 添加或修改 CSS */
 .assistant-image {
     position: absolute;
@@ -583,6 +584,55 @@ body {
 /* Live2D 相關樣式 */
 .live2d-container {
     position: relative !important;
+    width: 240px !important;
+    height: 240px !important;
+    margin: 0 auto !important;
+    transform: scale(1.1) !important; /* 稍微放大模型 */
+}
+
+
+#waifu {
+    position: relative !important;
+    width: 240px !important;
+    height: 240px !important;
+    margin: 0 auto !important;
+    z-index: 10 !important;
+    pointer-events: none !important; /* 避免模型干擾點擊事件 */
+}
+
+
+/* 改善提示框顯示 */
+#waifu-tips {
+    top: -30px; /* 調整提示框位置 */
+    background-color: rgba(255, 255, 255, 0.95); /* 提高背景不透明度 */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* 減輕陰影 */
+}
+
+
+#live2d {
+    position: relative;
+    z-index: 10;
+    transform-origin: center bottom; /* 設置變形原點在底部中心 */
+}
+
+/* 當虛擬助手說話時的動畫效果 */
+/* 說話動畫效果 */
+.virtual-assistant-display #waifu[data-speaking="true"] #live2d {
+    animation: live2d-talking 0.5s infinite alternate;
+}
+
+@keyframes live2d-talking {
+    from { transform: scale(1.2) translateY(0); }
+    to { transform: scale(1.2) translateY(-4px); }
+}
+
+
+/* 隱藏自動生成的全局 waifu */
+body > #waifu {
+    display: none !important; 
+}
+.virtual-assistant-display #waifu {
+    position: relative !important;
     width: 220px !important;
     height: 220px !important;
     margin: 0 auto !important;
@@ -591,56 +641,35 @@ body {
     right: auto !important;
     bottom: auto !important;
     transform: none !important;
+    z-index: 5 !important;
 }
 
-
-#waifu {
+.virtual-assistant-display #live2d {
     position: relative !important;
-    bottom: auto !important;
-    left: auto !important;
-    margin: 0 auto !important;
-    z-index: 10 !important;
-    transform: none !important;
+    transform: scale(1.2) !important;
+    transform-origin: center bottom !important;
 }
 
-#waifu-tips {
-    position: absolute;
-    top: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 180px;
-    min-height: 70px;
-    padding: 5px 10px;
-    border: 1px solid rgba(224, 186, 140, 0.62);
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 3px 15px 2px rgba(191, 158, 118, 0.2);
-    font-size: 12px;
-    line-height: 24px;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    opacity: 0;
-    transition: opacity 1s;
-    z-index: 20;
+.virtual-assistant-display #waifu-tips {
+    display: none !important;
 }
 
-#live2d {
-    position: relative;
-    z-index: 10;
-}
-
-/* 當虛擬助手說話時的動畫效果 */
-#waifu[data-speaking="true"] #live2d {
-    animation: live2d-talking 0.5s infinite alternate;
-}
-
-@keyframes live2d-talking {
-    from { transform: translateY(0); }
-    to { transform: translateY(-3px); }
-}
-
-
-/* 隱藏自動生成的全局 waifu */
-body > #waifu {
-    display: none !important; 
+body > #waifu, 
+html body > #waifu, 
+body > div#waifu, 
+body > div[id="waifu"],
+body > div > #waifu:not(.virtual-assistant-display #waifu) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    border: 0 !important;
 }

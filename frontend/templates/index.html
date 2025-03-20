@@ -10,28 +10,23 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/waifu.css">
-    <script src="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/waifu-tips.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/live2d-widget-model-shizuku@1.0.5/assets/shizuku.model.json"></script>
     
-    <!-- 引入 Live2D 庫 -->
+    <!-- 直接引入 Live2D 核心庫 -->
+    <script src="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/live2d.min.js"></script>
     
-    <!-- Live2D 相關設定 -->
+    <!-- 修改 Live2D 設置 -->
     <script>
         // Live2D 設定
         window.live2d_settings = {
-            modelAPI: 'https://live2d.fghrsh.net/api/',
             modelId: 2,                    // 模型ID (可以根據需要調整)
             modelTexturesId: 1,            // 材質ID
-            waifuSize: '220x220',          // 模型大小
+            waifuSize: '240x240',          // 調整模型大小
             waifuTipsSize: '180x70',       // 提示框大小
             waifuFontSize: '12px',         // 字體大小
             showToolMenu: false,           // 隱藏工具選單
-            canSwitchModel: true,         // 禁止切換模型
-            canSwitchTextures: true,      // 禁止切換材質
-            waifuEdgeSide: 'left:0',       // 位置調整
+            canSwitchModel: false,         // 禁止切換模型(改為false)
+            canSwitchTextures: false,      // 禁止切換材質(改為false)
             waifuDraggable: 'disable',     // 禁止拖拽
-            homePageUrl: '/',              // 主頁連結
             hitokoto: false,               // 不顯示一言
             debug: false,                  // 關閉除錯輸出
         };
@@ -256,6 +251,11 @@
                                     <span class="name">拿鐵咖啡</span>
                                     <span class="price" data-price="60">60元</span>
                                 </div>
+                                <div class="item" data-drink-key="mochaCoffee">
+                                    <span class="name">摩卡咖啡</span>
+                                    <span class="price" data-price="65">65元</span>
+                                </div>
+                                <div class="item" data-drink-key="oolongLatte">
                                 <div class="item" data-drink-key="mochaCoffee">
                                     <span class="name">摩卡咖啡</span>
                                     <span class="price" data-price="65">65元</span>
