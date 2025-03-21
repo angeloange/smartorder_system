@@ -15,11 +15,12 @@ from .order_analyzer import OrderAnalyzer
 from weather_API.weather_API import weather_dict ,classify_weather, get_weather_data
 from flask_socketio import SocketIO  # 添加這行
 from frontend.codes.speech import speech_bp
+from chat_tools.chat_analyzer import ChatAnalyzer
 
 
 # 初始化 Flask 應用
 app = Flask(__name__)
-
+chat_analyzer = ChatAnalyzer()
 # 初始化資料庫連接
 db = DB(dbconfig())
 
@@ -90,6 +91,33 @@ def temp_audio(filename):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/analyze_chat', methods=['POST'])
+def analyze_chat():
+    """處理一般對話功能"""
+    data = request.json
+    text = data.get('text', '')
+    
+    if not text:
+        return jsonify({'status': 'error', 'message': '未提供文字'}), 400
+    
+    # 分析聊天內容
+    result = chat_analyzer.analyze_chat(text)
+    
+    # 如果偵測到點餐意圖，交給 order_analyzer 處理
+    if result.get('is_order_intent', False) and 'drink' in text.lower():
+        try:
+            # 嘗試使用訂單分析器解析內容
+            order_result = order_analyzer.analyze_order(text)
+            if isinstance(order_result, dict) and order_result.get('status') == 'success':
+                return jsonify(order_result)
+        except Exception as e:
+            app.logger.error(f"訂單分析失敗: {str(e)}")
+    
+    # 返回聊天結果
+    return jsonify(result)
+
 
 # 新增處理文字訂單的路由
 @app.route('/analyze_text', methods=['POST'])

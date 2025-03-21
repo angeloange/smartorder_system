@@ -19,7 +19,7 @@
     <script>
         // Live2D 設定
         window.live2d_settings = {
-            modelId: 4,                    // 模型ID (可以根據需要調整)
+            modelId: 1,                    // 模型ID (可以根據需要調整)
             modelTexturesId: 3,            // 材質ID
             waifuSize: '240x240',          // 調整模型大小
             waifuTipsSize: '180x70',       // 提示框大小
@@ -339,74 +339,7 @@
         });
     </script>
     <!-- 在底部添加 -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('前台頁面已載入，準備連接 WebSocket...');
-        
-        // 確認 DOM 元素存在
-        const numberDisplay = document.querySelector('.number-display');
-        const waitingTime = document.querySelector('.waiting-time');
-        
-        console.log('取餐號碼元素:', numberDisplay);
-        console.log('等候時間元素:', waitingTime);
-        
-        // 連接 WebSocket
-        const socket = io('http://localhost:5003', {
-            transports: ['websocket', 'polling'],
-            reconnection: true,
-            reconnectionAttempts: 10
-        });
-        
-        socket.on('connect', () => {
-            console.log('WebSocket 連接成功，ID:', socket.id);
-        });
-        
-        socket.on('connect_error', (error) => {
-            console.error('WebSocket 連接錯誤:', error);
-        });
-        
-        socket.on('disconnect', (reason) => {
-            console.log('WebSocket 連接斷開:', reason);
-        });
-        
-        // 監聽訂單完成事件
-        socket.on('order_completed', (data) => {
-            console.log('收到訂單完成消息:', data);
-            
-            if (numberDisplay && data.order_number) {
-                console.log('更新取餐號碼:', data.order_number);
-                numberDisplay.textContent = data.order_number;
-                numberDisplay.classList.add('flash');
-                setTimeout(() => {
-                    numberDisplay.classList.remove('flash');
-                }, 2000);
-            }
-            
-            if (waitingTime && data.waiting_time !== undefined) {
-                console.log('更新等候時間:', data.waiting_time);
-                waitingTime.textContent = `${data.waiting_time} 分鐘`;
-                waitingTime.classList.add('flash');
-                setTimeout(() => {
-                    waitingTime.classList.remove('flash');
-                }, 2000);
-            }
-        });
-        
-        // 監聽等候時間更新事件
-        socket.on('waiting_time_update', (data) => {
-            console.log('收到等候時間更新:', data);
-            
-            if (waitingTime && data.waiting_time !== undefined) {
-                console.log('更新等候時間:', data.waiting_time);
-                waitingTime.textContent = `${data.waiting_time} 分鐘`;
-                waitingTime.classList.add('flash');
-                setTimeout(() => {
-                    waitingTime.classList.remove('flash');
-                }, 2000);
-            }
-        });
-    });
-    </script>
+
     <script>
         // 確保這是最後一個加載的腳本，將調用置於文件底部
         document.addEventListener('DOMContentLoaded', function() {
