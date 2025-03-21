@@ -49,6 +49,7 @@ class DB:
                     cursorclass=DictCursor
                 )
                 self.cursor = self.conn.cursor()
+                self.cursor.execute("SET SESSION time_zone = '+08:00';")
                 print("資料庫連線成功")
             except Exception as e:
                 print(f"資料庫連線失敗: {str(e)}")
