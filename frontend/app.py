@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 import json
 import os
 import datetime
@@ -14,7 +14,7 @@ from tools.tools import convert_order_date_for_db, get_now_time
 from .order_analyzer import OrderAnalyzer
 from weather_API.weather_API import weather_dict ,classify_weather, get_weather_data
 from flask_socketio import SocketIO  # 添加這行
-
+from frontend.codes.speech import speech_bp
 
 
 # 初始化 Flask 應用
@@ -76,6 +76,16 @@ class WeatherStatus(Enum):
     RAINY = 'rainy'
     STORMY = 'stormy'
 
+
+# 註冊藍圖
+app.register_blueprint(speech_bp)
+
+# 添加路由讓靜態檔案可以被訪問
+@app.route('/temp_audio/<path:filename>')
+def temp_audio(filename):
+    # 確保使用絕對路徑
+    audio_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_audio')
+    return send_from_directory(audio_dir, filename)
 
 @app.route('/')
 def index():

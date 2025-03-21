@@ -94,98 +94,109 @@ class VirtualAssistant {
     }
     
     // 說話功能 - 增強錯誤處理和回退機制
+    // 修改 VirtualAssistant 類中的 speak 方法
     speak(text) {
-        if (!this.synth) {
-            console.warn('語音合成不可用');
-            this.setAssistantState('speaking');
-            setTimeout(() => this.setAssistantState('idle'), text.length * 80);
-            return;
+        if (!text || text.trim() === '') return;
+        
+        // 首先添加消息到聊天窗口
+        // 確保這行代碼被執行，無論語音是否成功
+        if (!document.querySelector('.message.assistant:last-child .message-content')?.textContent?.includes(text)) {
+            this.addMessage('assistant', text);
         }
         
-        try {
-            // 取消所有正在播放的語音
-            this.synth.cancel();
-            
-            // 預處理文本
-            const processedText = this.addNaturalPauses(text);
-            
-            const utterance = new SpeechSynthesisUtterance(processedText);
-            
-            // 根據語音類型調整參數
-            if (this.voice && this.voice.name.includes('Microsoft')) {
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
+        // 設置虛擬助手為說話狀態
+        this.setAssistantState('speaking');
+        
+        // 使用 Azure 語音 API 生成語音
+        fetch('/api/get_speech', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                text: text,
+                style: 'female_warm'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 創建音頻元素並播放
+                const audio = new Audio(data.audio_url);
+                
+                // 音頻結束時設置空閒狀態
+                audio.onended = () => {
+                    this.setAssistantState('idle');
+                };
+                
+                // 音頻錯誤處理
+                audio.onerror = (err) => {
+                    console.error('音頻播放錯誤:', err);
+                    this.setAssistantState('idle');
+                };
+                
+                // 播放音頻 - 無需用戶交互
+                const playPromise = audio.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.warn('自動播放受限，嘗試靜音播放:', err);
+                        
+                        // 嘗試靜音自動播放
+                        audio.muted = true;
+                        audio.play().then(() => {
+                            // 短暫播放後取消靜音
+                            setTimeout(() => {
+                                audio.muted = false;
+                            }, 100);
+                        }).catch(err2 => {
+                            console.error('靜音播放也失敗:', err2);
+                            this.setAssistantState('idle');
+                        });
+                    });
+                }
             } else {
-                utterance.rate = 1.1;
-                utterance.pitch = 1.05;
+                console.error('語音生成失敗:', data.error);
+                this.setAssistantState('idle');
             }
-            
-            utterance.volume = 1.0;
-            
-            // 設定語音
-            if (this.voice) {
-                utterance.voice = this.voice;
-                console.log('使用語音:', this.voice.name);
-            } else {
-                console.warn('未找到合適語音，使用默認');
-            }
-            
-            // 說話開始
+        })
+        .catch(err => {
+            console.error('無法連接到語音API:', err);
+            this.setAssistantState('idle');
+        });
+    }
+   // 添加移動設備上顯示播放按鈕的方法
+showPlayButton(audioUrl) {
+    const lastMessage = document.querySelector('.message.assistant:last-child');
+    if (!lastMessage) return;
+    
+    // 檢查是否已有播放按鈕
+    if (lastMessage.querySelector('.play-audio-btn')) return;
+    
+    // 創建播放按鈕
+    const playButton = document.createElement('button');
+    playButton.className = 'play-audio-btn';
+    playButton.innerHTML = '<i class="fas fa-play-circle"></i> 播放語音';
+    
+    // 設置點擊事件
+    playButton.addEventListener('click', () => {
+        const audio = new Audio(audioUrl);
+        audio.onplay = () => {
             this.isSpeaking = true;
             this.setAssistantState('speaking');
-            
-            // 添加調試信息
-            console.log('嘗試播放語音:', processedText);
-            
-            // 設置超時回退，防止語音無法播放但未觸發onend
-            const speakTimeout = setTimeout(() => {
-                if (this.isSpeaking) {
-                    console.warn('語音播放超時，強制結束');
-                    this.isSpeaking = false;
-                    this.setAssistantState('idle');
-                }
-            }, Math.min(text.length * 120, 10000));
-            
-            // 說話結束時的回調
-            utterance.onend = () => {
-                clearTimeout(speakTimeout);
-                this.isSpeaking = false;
-                this.setAssistantState('idle');
-                console.log('語音播放完成');
-            };
-            
-            // 發生錯誤時
-            utterance.onerror = (err) => {
-                clearTimeout(speakTimeout);
-                console.error('語音合成錯誤:', err);
-                this.isSpeaking = false;
-                this.setAssistantState('idle');
-            };
-            
-            // 開始播放
-            this.synth.speak(utterance);
-            
-        } catch (error) {
-            console.error('語音合成出現異常:', error);
+            playButton.innerHTML = '<i class="fas fa-volume-up"></i> 播放中...';
+        };
+        audio.onended = () => {
             this.isSpeaking = false;
             this.setAssistantState('idle');
-        }
-    }
-    // 新增：添加自然停頓的輔助方法
-    addNaturalPauses(text) {
-        // 在標點符號後添加短暫停頓
-        let processedText = text.replace(/([，。！？：；])/g, '$1,');
-        
-        // 處理特定句型來增加自然度
-        processedText = processedText
-            .replace(/請問您今天想喝什麼呢？/g, '請問您，今天想喝什麼呢？')
-            .replace(/我幫您確認一下訂單：/g, '我幫您，確認一下，訂單：')
-            .replace(/請問確認訂購嗎？/g, '請問，確認訂購嗎？')
-            .replace(/訂單已確認！/g, '訂單已確認！')
-            .replace(/謝謝您的光臨。/g, '謝謝您的，光臨。');
-        
-        return processedText;
-    }
+            playButton.innerHTML = '<i class="fas fa-play-circle"></i> 重播語音';
+        };
+        audio.play().catch(console.error);
+    });
+    
+    // 添加按鈕到消息元素
+    lastMessage.appendChild(playButton);
+}
     
     // 初始化語音識別
     initSpeechRecognition() {
@@ -525,119 +536,126 @@ setAssistantState(state) {
 }
 
 // 當 DOM 加載完成後初始化一次
-// 當 DOM 加載完成後設置解鎖按鈕
+// 修改 DOMContentLoaded 事件處理函數
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM 載入完成，設置音頻解鎖按鈕...');
+    console.log('DOM 載入完成，初始化虛擬助手...');
     
-    // 創建解鎖容器
-    const unlockContainer = document.createElement('div');
-    unlockContainer.className = 'audio-unlock-container';
-    unlockContainer.id = 'audioUnlockContainer';
-    unlockContainer.innerHTML = `
-        <div class="unlock-content">
-            <h3>開始使用智慧點餐</h3>
-            <p>點擊下方按鈕啟動語音功能</p>
-            <button id="unlockAudioBtn" class="unlock-button">
-                <i class="fas fa-volume-up"></i> 啟動語音系統
-            </button>
-            <div class="device-note">（此步驟在移動設備上必需）</div>
-        </div>
-    `;
+    // 檢查是否已經初始化
+    if (window.virtualAssistant) {
+        console.log('虛擬助手已初始化，跳過');
+        return;
+    }
     
-    // 添加到頁面頂部
-    document.body.insertBefore(unlockContainer, document.body.firstChild);
+    // 自動解鎖音頻，無需顯示按鈕
+    const unlockContainer = document.getElementById('audioUnlockContainer');
+    if (unlockContainer) {
+        unlockContainer.style.display = 'none'; // 隱藏解鎖界面
+    }
     
-    // 添加樣式
-    const style = document.createElement('style');
-    style.textContent = `
-        .audio-unlock-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .unlock-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            max-width: 80%;
-        }
-        .unlock-button {
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 18px;
-            border-radius: 30px;
-            margin: 20px 0;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s;
-        }
-        .unlock-button:hover {
-            background-color: #45a049;
-        }
-        .device-note {
-            font-size: 12px;
-            color: #777;
-            margin-top: 15px;
-        }
-    `;
-    document.head.appendChild(style);
-    
-    // 添加點擊事件
-    document.getElementById('unlockAudioBtn').addEventListener('click', async () => {
-        try {
-            console.log('嘗試解鎖音頻...');
-            
-            // 使用現代音頻 API 解鎖 
+    // 嘗試自動解鎖音頻
+    try {
+        const autoUnlockAudio = async () => {
+            // 使用現代音頻 API 自動解鎖
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // 創建並播放靜音數據來解鎖
             const buffer = audioContext.createBuffer(1, 1, 22050);
             const source = audioContext.createBufferSource();
             source.buffer = buffer;
             source.connect(audioContext.destination);
             source.start(0);
             
-            // 嘗試使用語音合成來解鎖
+            // 使用語音合成自動解鎖
             const synth = window.speechSynthesis;
             if (synth) {
-                // 使用空字符觸發語音合成初始化
-                synth.cancel(); // 確保沒有待處理的語音
+                synth.cancel();
                 const silence = new SpeechSynthesisUtterance('');
-                silence.volume = 0.01; // 近乎無聲
+                silence.volume = 0.01;
                 synth.speak(silence);
             }
             
-            // 使用音頻標籤來解鎖
-            const unlockAudio = new Audio();
-            unlockAudio.src = "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
-            await unlockAudio.play();
-            
-            console.log('音頻解鎖成功');
-            
-            // 隱藏解鎖界面
-            document.getElementById('audioUnlockContainer').style.display = 'none';
+            console.log('音頻自動解鎖成功');
             
             // 初始化虛擬助手
             window.virtualAssistant = new VirtualAssistant();
+        };
+        
+        // 執行自動解鎖
+        autoUnlockAudio();
+    } catch (error) {
+        console.error('自動解鎖失敗:', error);
+        // 即使失敗也初始化虛擬助手
+        window.virtualAssistant = new VirtualAssistant();
+    }
+});
+
+// 在 assistant.js 中添加檢測移動裝置並顯示解鎖按鈕
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 如果是移動裝置，顯示解鎖按鈕
+    if (isMobileDevice()) {
+        const unlockDiv = document.createElement('div');
+        unlockDiv.className = 'audio-unlock-container';
+        unlockDiv.innerHTML = `
+            <button class="unlock-button">
+                <i class="fas fa-volume-up"></i> 點擊啟用語音
+            </button>
+        `;
+        document.body.appendChild(unlockDiv);
+        
+        const unlockButton = unlockDiv.querySelector('.unlock-button');
+        unlockButton.addEventListener('click', () => {
+            // 播放一個靜音音頻來解鎖
+            const silentAudio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjMyLjEwNAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAABAAADQgD///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAA5TEFNRTMuMTAwBK8AAAAAAAAAABUgJAUHQQAB9gAAA0LGZPx9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV");
+            silentAudio.play().catch(err => console.error('音頻解鎖失敗:', err));
             
-        } catch (error) {
-            console.error('音頻解鎖失敗:', error);
+            // 啟動語音合成解鎖
+            const synth = window.speechSynthesis;
+            if (synth) {
+                const utterance = new SpeechSynthesisUtterance('');
+                utterance.volume = 0.01;
+                synth.speak(utterance);
+            }
             
-            // 即使解鎖失敗也繼續初始化（可能沒有聲音）
-            document.getElementById('audioUnlockContainer').style.display = 'none';
+            // 隱藏解鎖按鈕
+            unlockDiv.style.display = 'none';
             
+            // 初始化虛擬助手
+            if (!window.virtualAssistant) {
+                window.virtualAssistant = new VirtualAssistant();
+            }
+        });
+        
+        // 添加樣式
+        const style = document.createElement('style');
+        style.textContent = `
+            .audio-unlock-container {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.8);
+                padding: 20px;
+                border-radius: 10px;
+                z-index: 10000;
+                text-align: center;
+            }
+            .unlock-button {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 16px;
+                cursor: pointer;
+            }
+        `;
+        document.head.appendChild(style);
+    } else {
+        // 電腦版保持原有行為
+        if (!window.virtualAssistant) {
             window.virtualAssistant = new VirtualAssistant();
-            alert('語音功能可能在此設備上不可用。請允許瀏覽器使用麥克風和揚聲器。');
         }
-    });
+    }
 });

@@ -673,3 +673,30 @@ body > div > #waifu:not(.virtual-assistant-display #waifu) {
     padding: 0 !important;
     border: 0 !important;
 }
+
+/* 添加到 menu.css */
+
+/* 語音播放按鈕 */
+.play-audio-btn {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    font-size: 12px;
+    margin-top: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+}
+
+.play-audio-btn:hover {
+    background-color: #45a049;
+    transform: scale(1.02);
+}
+
+.play-audio-btn i {
+    font-size: 14px;
+}
