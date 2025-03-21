@@ -306,7 +306,7 @@ def confirm_order():
     try:
         data = request.json
         order_details = data.get('order_details', [])
-        
+        order_details = convert_order_date_for_db(orders_list=order_details)
         if not order_details:
             return jsonify({'status': 'error', 'message': '訂單不能為空'})
         
