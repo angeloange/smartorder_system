@@ -20,7 +20,7 @@ VOICE_NAMES = {
     'female_warm': 'zh-TW-HsiaoChenNeural',   # 溫暖女聲
     'female_cheerful': 'zh-TW-HsiaoYuNeural',  # 活潑女聲
     'male_warm': 'zh-TW-YunJheNeural',         # 溫暖男聲
-    'default': 'zh-TW-HsiaoChenNeural'         # 預設女聲
+    'default': 'zh-TW-HsiaoYuNeural'         # 預設女聲
 }
 
 @speech_bp.route('/api/get_speech', methods=['POST'])
@@ -29,6 +29,7 @@ def get_speech():
     data = request.json
     text = data.get('text', '')
     voice_style = data.get('style', 'default')
+    speaking_rate = data.get('rate', 1.2)
     
     if not text:
         return jsonify({'success': False, 'error': '未提供文字'}), 400
@@ -44,14 +45,16 @@ def get_speech():
         voice_name = VOICE_NAMES.get(voice_style, VOICE_NAMES['default'])
         speech_config.speech_synthesis_voice_name = voice_name
         
-        # 添加表情和語調控制 (SSML)
+        # 添加表情、語調和語速控制 (SSML)
         ssml_text = f"""
         <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" 
                xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="zh-TW">
             <voice name="{voice_name}">
-                <mstts:express-as style="cheerful" styledegree="1.2">
-                    {text}
-                </mstts:express-as>
+                <prosody rate="{speaking_rate}">
+                    <mstts:express-as style="cheerful" styledegree="1.2">
+                        {text}
+                    </mstts:express-as>
+                </prosody>
             </voice>
         </speak>
         """
