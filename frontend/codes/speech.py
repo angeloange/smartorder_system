@@ -4,7 +4,7 @@ import uuid
 import azure.cognitiveservices.speech as speechsdk
 from flask import Blueprint, jsonify, request, current_app, url_for
 from dotenv import load_dotenv
-
+import logging
 # 載入環境變數
 load_dotenv()
 
@@ -22,6 +22,13 @@ VOICE_NAMES = {
     'male_warm': 'zh-TW-YunJheNeural',         # 溫暖男聲
     'default': 'zh-TW-HsiaoYuNeural'         # 預設女聲
 }
+
+# 設置日誌記錄器
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('speech')
+
+
 
 @speech_bp.route('/api/get_speech', methods=['POST'])
 def get_speech():
@@ -85,8 +92,23 @@ def get_speech():
             # 創建可訪問的URL
             audio_url = f'/temp_audio/{filename}'
             
-            # 記錄成功訊息
-            current_app.logger.info(f"語音合成成功: {text[:30]}...")
+            # 設置延遲刪除（使用後台線程）
+            def delayed_delete():
+                import time
+                
+                # 等待20秒（假設足夠播放完成）
+                time.sleep(20)
+                
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        logger.info(f"已自動刪除語音文件: {filename}")
+                except Exception as e:
+                    logger.error(f"自動刪除語音文件失敗: {str(e)}")
+            
+            # 創建後台線程運行刪除函數
+            import threading
+            threading.Thread(target=delayed_delete, daemon=True).start()
             
             return jsonify({
                 'success': True,
