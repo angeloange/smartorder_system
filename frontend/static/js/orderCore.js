@@ -203,8 +203,9 @@ class OrderCore {
                 });
                 this.waitingTime = Math.max(3, totalQuantity * 3);
                 
-                // 更新訂單號和等待時間
-                this.updateOrderDisplay();
+                // 更新訂單號和等待時間 - 不再立即顯示取餐號碼，等後台通知
+                // 僅顯示等待時間，取餐號碼等待後台Socket.io通知
+                this.updateWaitingTimeDisplay();
                 
                 // 回調通知
                 if (this.callbacks.onOrderConfirm) {
@@ -212,7 +213,7 @@ class OrderCore {
                         success: true,
                         orderNumber: this.orderNumber,
                         waitingTime: this.waitingTime,
-                        message: `訂單已確認！您的取餐號碼是 ${this.orderNumber}，預計等候時間約 ${this.waitingTime} 分鐘，謝謝您的光臨。`
+                        message: `訂單已確認！您的訂單正在製作中，預計等候時間約 ${this.waitingTime} 分鐘。完成後會在取餐號碼區域通知您。`
                     });
                 }
                 
@@ -220,7 +221,7 @@ class OrderCore {
                     success: true,
                     orderNumber: this.orderNumber,
                     waitingTime: this.waitingTime,
-                    message: `訂單已確認！您的取餐號碼是 ${this.orderNumber}，預計等候時間約 ${this.waitingTime} 分鐘，謝謝您的光臨。`
+                    message: `訂單已確認！您的訂單正在製作中，預計等候時間約 ${this.waitingTime} 分鐘。完成後會在取餐號碼區域通知您。`
                 };
             } else {
                 this.state = 'confirming';
@@ -293,7 +294,25 @@ class OrderCore {
     }
     
     /**
+     * 只更新等待時間顯示
+     */
+    updateWaitingTimeDisplay() {
+        try {
+            // 只更新等待時間顯示
+            const waitingTimeDisplay = document.querySelector('.waiting-time');
+            if (waitingTimeDisplay) {
+                waitingTimeDisplay.textContent = `${this.waitingTime} 分鐘`;
+                waitingTimeDisplay.classList.add('flash');
+                setTimeout(() => waitingTimeDisplay.classList.remove('flash'), 2000);
+            }
+        } catch (error) {
+            console.error('更新等待時間顯示錯誤:', error);
+        }
+    }
+
+    /**
      * 更新訂單顯示
+     * 這個方法現在只在收到Socket.io通知時調用
      */
     updateOrderDisplay() {
         try {
@@ -304,21 +323,34 @@ class OrderCore {
             if (numberDisplay) {
                 numberDisplay.textContent = this.orderNumber;
                 numberDisplay.classList.add('flash');
+                // 播放提示音效
+                this.playNotificationSound();
+                // 顯示提示文字
+                const infoText = numberDisplay.nextElementSibling;
+                if (infoText && infoText.classList.contains('info-text')) {
+                    infoText.textContent = '您的飲料已完成，請取餐！';
+                    infoText.classList.add('highlight');
+                    setTimeout(() => infoText.classList.remove('highlight'), 5000);
+                }
                 setTimeout(() => numberDisplay.classList.remove('flash'), 2000);
-            }
-            
-            // 更新等待時間顯示
-            const waitingTimeDisplay = document.querySelector('.waiting-time');
-            if (waitingTimeDisplay) {
-                waitingTimeDisplay.textContent = `${this.waitingTime} 分鐘`;
-                waitingTimeDisplay.classList.add('flash');
-                setTimeout(() => waitingTimeDisplay.classList.remove('flash'), 2000);
             }
         } catch (error) {
             console.error('更新訂單顯示錯誤:', error);
         }
     }
-    
+
+    /**
+     * 播放通知音效
+     */
+    playNotificationSound() {
+        try {
+            const audio = new Audio('/static/sounds/notification.mp3');
+            audio.play();
+        } catch (error) {
+            console.error('播放通知音效出錯:', error);
+        }
+    }
+
     /**
      * 獲取當前訂單狀態
      * @return {Object} 訂單狀態
@@ -354,12 +386,12 @@ class OrderCore {
         // 更新等待時間
         if (data.status === 'preparing') {
             this.waitingTime = Math.max(1, this.waitingTime - 2);
+            this.updateWaitingTimeDisplay();
         } else if (data.status === 'ready' || data.status === 'completed') {
             this.waitingTime = 0;
+            // 訂單完成/就緒時，更新取餐號碼顯示
+            this.updateOrderDisplay();
         }
-        
-        // 更新顯示
-        this.updateOrderDisplay();
         
         // 回調通知
         if (this.callbacks.onOrderStatusUpdate) {

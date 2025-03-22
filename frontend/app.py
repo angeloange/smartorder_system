@@ -507,7 +507,9 @@ def generate_order_number(db, count=1):
             order_numbers.append(fallback)
     
     return order_numbers
-# 修改確認訂單的路由，確保發送 Socket.IO 通知
+
+# 修改確認訂單後的Socket.IO通知機制
+
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
     try:
@@ -568,12 +570,41 @@ def confirm_order():
                     success_count += 1
                     created_order_numbers.append(order_numbers[i])
                     
-                    # 使用 Socket.IO 廣播訂單狀態
+                    # 使用 Socket.IO 廣播訂單狀態 - 狀態為 pending
                     socketio.emit('order_status_update', {
                         'order_number': order_numbers[i],
                         'status': 'pending',
                         'timestamp': now.strftime('%Y-%m-%d %H:%M:%S')
                     })
+                    
+                    # 在開發環境中，自動模擬訂單狀態變更
+                    # 實際生產環境應該由後台管理系統觸發
+                    if app.config.get('ENV') == 'development':
+                        # 2秒後狀態變為 preparing
+                        socketio.sleep(2)
+                        socketio.emit('order_status_update', {
+                            'order_number': order_numbers[i],
+                            'status': 'preparing',
+                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        })
+                        
+                        # 再過6秒後狀態變為 completed
+                        def send_completed_status(order_number):
+                            socketio.sleep(6)
+                            socketio.emit('order_completed', {
+                                'order_number': order_number,
+                                'status': 'completed',
+                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            })
+                            
+                            # 更新數據庫狀態
+                            update_query = "UPDATE orders SET status = 'completed' WHERE order_number = %s"
+                            db.execute(update_query, (order_number,))
+                            
+                            print(f"訂單 {order_number} 已完成")
+                            
+                        # 啟動背景任務發送完成通知
+                        socketio.start_background_task(send_completed_status, order_numbers[i])
                 else:
                     print(f"插入訂單失敗: {values}")
             except Exception as e:
