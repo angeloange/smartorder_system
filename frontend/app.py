@@ -15,11 +15,12 @@ from .order_analyzer import OrderAnalyzer
 from weather_API.weather_API import weather_dict ,classify_weather, get_weather_data
 from flask_socketio import SocketIO  # 添加這行
 from frontend.codes.speech import speech_bp
+from chat_tools.chat_analyzer import ChatAnalyzer
 
 
 # 初始化 Flask 應用
 app = Flask(__name__)
-
+chat_analyzer = ChatAnalyzer()
 # 初始化資料庫連接
 db = DB(dbconfig())
 
@@ -48,7 +49,6 @@ SUGAR_MAPPING = {
     '全糖': 'full',
     '七分糖': 'seventy',
     '半糖': 'half',
-    '三分糖': 'thirty',
     '微糖': 'light',
     '無糖': 'free'
 }
@@ -91,7 +91,143 @@ def temp_audio(filename):
 def index():
     return render_template('index.html')
 
-# 新增處理文字訂單的路由
+
+@app.route('/analyze_chat', methods=['POST'])
+def analyze_chat():
+    """處理一般對話功能，通過 GPT API 判斷用戶意圖"""
+    try:
+        data = request.json
+        text = data.get('text', '')
+        
+        if not text:
+            return jsonify({'status': 'error', 'message': '未提供文字'}), 400
+        
+        # 先嘗試直接使用訂單分析器處理
+        try:
+            # 預處理訂單文本
+            processed_text = preprocess_order_text(text)
+            
+            # 直接使用訂單分析器嘗試分析
+            app.logger.info(f"直接嘗試分析訂單: {processed_text}")
+            order_details = analyzer.analyze_order(processed_text)
+            
+            # 如果成功解析為訂單
+            if isinstance(order_details, list) and len(order_details) > 0:
+                app.logger.info(f"成功解析訂單: {order_details}")
+                
+                # 為訂單詳情添加默認值
+                for item in order_details:
+                    if 'size' not in item or not item['size']:
+                        item['size'] = '中杯'
+                    if 'ice' not in item or not item['ice']:
+                        item['ice'] = '正常冰'
+                    if 'sugar' not in item or not item['sugar']:
+                        item['sugar'] = '全糖'
+                    if 'quantity' not in item:
+                        item['quantity'] = 1
+                
+                # 將訂單格式化為易讀格式
+                formatted_order = format_order_text(order_details)
+                
+                # 直接返回訂單信息
+                return jsonify({
+                    'status': 'success',
+                    'is_order': True,
+                    'reply': f"我幫您確認一下訂單：{formatted_order}\n\n請問確認訂購嗎？",
+                    'order_details': order_details,
+                    'order_text': formatted_order
+                })
+        except Exception as e:
+            app.logger.info(f"直接訂單分析失敗: {str(e)}")
+            # 如果直接分析失敗，繼續使用 GPT 分析
+        
+        # 使用 ChatAnalyzer (GPT API) 分析聊天內容和意圖
+        gpt_result = chat_analyzer.analyze_chat(text)
+        
+        # 檢查 GPT 是否將意圖識別為訂單
+        is_order_intent = gpt_result.get('intent') == 'order' or gpt_result.get('is_order_intent', False)
+        
+        app.logger.info(f"GPT 分析結果: 意圖={gpt_result.get('intent')}, 是否訂單={is_order_intent}")
+        
+        # 如果 GPT 判斷為點餐意圖，嘗試用訂單分析器處理
+        if is_order_intent:
+            app.logger.info(f"GPT 檢測到點餐意圖，處理訂單: {text}")
+            
+            # 使用訂單分析器分析訂單
+            try:
+                # 先預處理文本
+                processed_text = preprocess_order_text(text)
+                # 嘗試補充信息
+                enhanced_text = enhance_order_text(processed_text)
+                
+                app.logger.info(f"預處理後的訂單文本: {enhanced_text}")
+                order_details = analyzer.analyze_order(enhanced_text)
+                
+                # 檢查訂單分析結果
+                if isinstance(order_details, list) and len(order_details) > 0:
+                    # 成功解析訂單詳情
+                    app.logger.info(f"GPT引導後成功解析訂單: {order_details}")
+                    
+                    # 為訂單詳情添加默認值
+                    for item in order_details:
+                        if 'size' not in item or not item['size']:
+                            item['size'] = '中杯'
+                        if 'ice' not in item or not item['ice']:
+                            item['ice'] = '正常冰'
+                        if 'sugar' not in item or not item['sugar']:
+                            item['sugar'] = '全糖'
+                        if 'quantity' not in item:
+                            item['quantity'] = 1
+                    
+                    # 將訂單格式化為易讀格式
+                    formatted_order = format_order_text(order_details)
+                    
+                    return jsonify({
+                        'status': 'success',
+                        'is_order': True,
+                        'reply': f"我幫您確認一下訂單：{formatted_order}\n\n請問確認訂購嗎？",
+                        'order_details': order_details,
+                        'order_text': formatted_order
+                    })
+                else:
+                    # 訂單分析失敗，但確認是訂單意圖
+                    app.logger.info("GPT檢測為訂單意圖，但無法解析具體訂單")
+                    return jsonify({
+                        'status': 'success',
+                        'is_order': True,
+                        'reply': "看起來您想點餐，請告訴我您想要的飲料名稱、大小、甜度和冰量，例如：'一杯中杯半糖少冰珍珠奶茶'。",
+                        'order_details': None
+                    })
+            except Exception as e:
+                app.logger.error(f"GPT引導訂單分析失敗: {str(e)}")
+                # 訂單分析出錯，但確認是訂單意圖
+                return jsonify({
+                    'status': 'success',
+                    'is_order': True,
+                    'reply': "很抱歉，我無法完全理解您的訂單。請明確說明想要的飲料名稱，以及甜度和冰量。",
+                    'order_details': None
+                })
+        
+        # 如果不是點餐意圖，返回 GPT 回應
+        return jsonify({
+            'status': 'success',
+            'is_order': False,
+            'reply': gpt_result.get('reply', '我不太理解您的意思，請再說一次。')
+        })
+    
+    except Exception as e:
+        app.logger.error(f"處理聊天分析時發生錯誤: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            'status': 'error',
+            'message': f'處理失敗: {str(e)}',
+            'reply': '抱歉，系統暫時遇到問題，請稍後再試。'
+        })
+
+
+# 修改處理文字訂單的路由
 @app.route('/analyze_text', methods=['POST'])
 def analyze_text():
     try:
@@ -104,11 +240,41 @@ def analyze_text():
                 'message': '請輸入訂單內容'
             })
 
+        # 預處理文本 - 處理簡單訂單表達
+        text = preprocess_order_text(text)
+        
         # 使用訂單分析器分析訂單
         order_details = analyzer.analyze_order(text)
         
+        # 檢查是否有錯誤
+        if isinstance(order_details, dict) and 'status' in order_details and order_details['status'] == 'error':
+            # 嘗試補充基本信息再次分析
+            enhanced_text = enhance_order_text(text)
+            if enhanced_text != text:
+                print(f"增強訂單文本: {text} -> {enhanced_text}")
+                order_details = analyzer.analyze_order(enhanced_text)
+        
+        # 如果仍然有錯誤，返回錯誤信息
         if isinstance(order_details, dict) and 'status' in order_details and order_details['status'] == 'error':
             return jsonify(order_details)
+        
+        # 確保返回的是列表
+        if not isinstance(order_details, list):
+            return jsonify({
+                'status': 'error',
+                'message': '訂單分析結果格式錯誤'
+            })
+        
+        # 對於沒有明確指定的屬性，添加默認值
+        for item in order_details:
+            if 'size' not in item or not item['size']:
+                item['size'] = '中杯'
+            if 'ice' not in item or not item['ice']:
+                item['ice'] = '正常冰'
+            if 'sugar' not in item or not item['sugar']:
+                item['sugar'] = '全糖'
+            if 'quantity' not in item:
+                item['quantity'] = 1
         
         return jsonify({
             'status': 'success',
@@ -117,10 +283,40 @@ def analyze_text():
 
     except Exception as e:
         print(f"處理訂單時發生錯誤: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'status': 'error',
             'message': '處理訂單時發生錯誤'
         })
+
+# 預處理訂單文本
+def preprocess_order_text(text):
+    # 檢查是否是純飲料名稱，例如："蜂蜜檸檬"
+    for drink in analyzer.drinks_menu:
+        if text.strip() == drink:
+            return f"一杯{text}"
+    
+    return text
+
+# 增強訂單文本 - 針對缺少的資訊進行補充
+def enhance_order_text(text):
+    # 如果文本只有飲料名稱，加上數量
+    if len(text) < 10 and not any(x in text for x in ['杯', '要', '點']):
+        return f"一杯{text}"
+    
+    # 已經有基本結構，但可能缺少屬性
+    enhanced = text
+    
+    # 檢查是否需要添加甜度
+    if not any(sugar in enhanced for sugar in analyzer.sugar_options):
+        enhanced += " 全糖"
+    
+    # 檢查是否需要添加冰量
+    if not any(ice in enhanced for ice in analyzer.ice_options):
+        enhanced += " 正常冰"
+    
+    return enhanced
 
 # 新增月度熱銷飲品路由
 # 初始化資料庫連接
@@ -311,6 +507,9 @@ def generate_order_number(db, count=1):
             order_numbers.append(fallback)
     
     return order_numbers
+
+# 修改確認訂單後的Socket.IO通知機制
+
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
     try:
@@ -320,79 +519,96 @@ def confirm_order():
         if not order_details:
             return jsonify({'status': 'error', 'message': '訂單不能為空'})
         
-        # 展開訂單項目
+        # 展開訂單項目，處理相同品項多杯的情況
         expanded_orders = []
         for order in order_details:
+            # 獲取數量，預設為1
             quantity = order.get('quantity', 1)
+            quantity = int(quantity)  # 確保是整數
+            
+            # 根據數量複製訂單項目
             for i in range(quantity):
+                # 創建新的訂單項目，但不包含 quantity
                 order_item = {k: v for k, v in order.items() if k != 'quantity'}
                 expanded_orders.append(order_item)
         
         # 生成訂單號碼
-        from codes.db import DB, dbconfig
-        db = DB(dbconfig())
         order_numbers = generate_order_number(db, len(expanded_orders))
-        
         if not order_numbers:
             return jsonify({'status': 'error', 'message': '無法生成訂單號碼'})
         
-        # 獲取當前時間和天氣
+        # 取得當前時間
         now = datetime.now()
         order_date = now.date()
         order_time = now.strftime('%H:%M:%S')
         
         success_count = 0
-        failed_orders = []
-
-        weather, temperature = classify_weather(weather=get_weather_data()[2], weather_dict=weather_dict), get_weather_data()[3]
-
+        created_order_numbers = []
+        
         for i, order in enumerate(expanded_orders):
             try:
-                # 嘗試3次插入，避免訂單號衝突
-                max_retries = 3
-                for attempt in range(max_retries):
-                    try:
-                        query = """
-                            INSERT INTO orders (
-                                drink_name, size, ice_type, sugar_type, 
-                                order_date, order_time, 
-                                weather_status, temperature,
-                                status, created_at, order_number
-                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s)
-                        """
-                        values = (
-                            order.get('drink_name', '未知飲品'), 
-                            order.get('size', '中杯'),
-                            order.get('ice', '正常冰'), 
-                            order.get('sugar', '全糖'),
-                            order_date, order_time,
-                            weather, temperature,
-                            'pending', order_numbers[i]
-                        )
+                query = """
+                    INSERT INTO orders (
+                        drink_name, size, ice_type, sugar_type, 
+                        order_date, order_time, 
+                        weather_status, temperature,
+                        status, created_at, order_number
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s)
+                """
+                values = (
+                    order.get('drink_name', '未知飲品'), 
+                    order.get('size', '中杯'),
+                    order.get('ice', '正常冰'), 
+                    order.get('sugar', '全糖'),
+                    order_date, order_time,
+                    'sunny', 25.0,  # 默認天氣
+                    'pending', order_numbers[i]
+                )
+                
+                print(f"準備插入訂單，值為: {values}")
+                if db.execute(query, values):
+                    success_count += 1
+                    created_order_numbers.append(order_numbers[i])
+                    
+                    # 使用 Socket.IO 廣播訂單狀態 - 狀態為 pending
+                    socketio.emit('order_status_update', {
+                        'order_number': order_numbers[i],
+                        'status': 'pending',
+                        'timestamp': now.strftime('%Y-%m-%d %H:%M:%S')
+                    })
+                    
+                    # 在開發環境中，自動模擬訂單狀態變更
+                    # 實際生產環境應該由後台管理系統觸發
+                    if app.config.get('ENV') == 'development':
+                        # 2秒後狀態變為 preparing
+                        socketio.sleep(2)
+                        socketio.emit('order_status_update', {
+                            'order_number': order_numbers[i],
+                            'status': 'preparing',
+                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        })
                         
-                        print(f"準備插訂單，值為: {values}")
-                        if db.execute(query, values):
-                            success_count += 1
-                            break  # 成功就跳出重試循環
-                        else:
-                            print(f"插入訂單失敗: {values}")
-                            # 如果不是最後一次嘗試，重新生成訂單號
-                            if attempt < max_retries - 1:
-                                new_numbers = generate_order_number(db, 1)
-                                if new_numbers:
-                                    order_numbers[i] = new_numbers[0]
-                    except Exception as e:
-                        print(f"嘗試 #{attempt+1} 插入訂單失敗: {str(e)}")
-                        if 'Duplicate entry' in str(e) and attempt < max_retries - 1:
-                            # 如果是重複錯誤且不是最後一次嘗試，重新生成訂單號
-                            new_numbers = generate_order_number(db, 1)
-                            if new_numbers:
-                                order_numbers[i] = new_numbers[0]
-                        else:
-                            raise  # 重新拋出其他錯誤或最後一次嘗試的錯誤
+                        # 再過6秒後狀態變為 completed
+                        def send_completed_status(order_number):
+                            socketio.sleep(6)
+                            socketio.emit('order_completed', {
+                                'order_number': order_number,
+                                'status': 'completed',
+                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            })
+                            
+                            # 更新數據庫狀態
+                            update_query = "UPDATE orders SET status = 'completed' WHERE order_number = %s"
+                            db.execute(update_query, (order_number,))
+                            
+                            print(f"訂單 {order_number} 已完成")
+                            
+                        # 啟動背景任務發送完成通知
+                        socketio.start_background_task(send_completed_status, order_numbers[i])
+                else:
+                    print(f"插入訂單失敗: {values}")
             except Exception as e:
                 print(f"插入單筆訂單時發生錯誤: {str(e)}")
-                failed_orders.append(order)
         
         if success_count == 0:
             return jsonify({
@@ -400,14 +616,20 @@ def confirm_order():
                 'message': '所有訂單儲存失敗'
             })
             
+        # 輸出所有創建的訂單號碼，方便調試
+        print(f"成功創建訂單: {created_order_numbers}")
+            
         return jsonify({
             'status': 'success',
             'message': f'成功建立 {success_count}/{len(expanded_orders)} 筆訂單',
-            'order_number': order_numbers[0].split('-')[0][-2:]  # 只返回第一杯飲料號碼的最後兩位
+            'order_number': order_numbers[0].split('-')[0][-2:] if '-' in order_numbers[0] else order_numbers[0][-2:],  # 只返回第一杯飲料號碼的最後兩位
+            'full_order_number': order_numbers[0]   # 完整訂單號碼，用於追蹤
         })
 
     except Exception as e:
         print(f"儲存訂單時發生錯誤: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'status': 'error',
             'message': '訂單處理失敗'

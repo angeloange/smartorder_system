@@ -1,0 +1,539 @@
+/**
+ * 訂單處理核心 - 全局非模塊版本
+ * 用於解決模塊導入問題和確保全局可用性
+ */
+
+// 確保全局作用域有 OrderCore
+(function(window) {
+    /**
+     * 訂單處理核心 - 處理點餐流程和訂單管理
+     */
+    class OrderCore {
+        constructor() {
+            // 初始化訂單狀態
+            this.currentOrder = null;
+            this.orderConfirmed = false;
+            this.orderNumber = null;
+            this.state = 'idle'; // idle, analyzing, confirming, processing, completed
+            this.waitingTime = 0; // 等候時間(分鐘)
+            
+            // 初始化回調函數
+            this.callbacks = {
+                onOrderProcessStart: null,
+                onOrderProcessSuccess: null,
+                onOrderProcessFail: null,
+                onOrderConfirm: null,
+                onOrderCancel: null,
+                onOrderStatusUpdate: null
+            };
+            
+            // 飲料數據
+            this.drinks = [
+                '珍珠奶茶', '紅茶', '綠茶', '奶茶', '青茶', '烏龍茶', '鮮奶茶',
+                '冬瓜茶', '檸檬茶', '蜂蜜檸檬', '梅子綠茶', '冬瓜檸檬', '普洱茶',
+                '奶綠', '烏龍奶茶', '焦糖奶茶', '波霸奶茶', '椰果奶茶', '蜂蜜奶茶',
+                '仙草奶茶', '布丁奶茶', '巧克力牛奶', '美式咖啡', '卡布奇諾', 
+                '拿鐵咖啡', '摩卡咖啡', '烏龍拿鐵', '紅茶咖啡', '牛奶咖啡'
+            ];
+            
+            // 執行初始化
+            this.init();
+        }
+        
+        /**
+         * 初始化函數
+         */
+        init() {
+            this.initSocketIO();
+            this.initEventListeners();
+            console.log('OrderCore 全局版本初始化完成');
+        }
+        
+        /**
+         * 註冊回調函數
+         * @param {Object} callbacks 回調函數集合
+         */
+        registerCallbacks(callbacks) {
+            this.callbacks = {...this.callbacks, ...callbacks};
+        }
+        
+        /**
+         * 處理用戶輸入，判斷是否為點餐意圖
+         * @param {string} text 用戶輸入
+         * @return {boolean} 是否為點餐意圖
+         */
+        isOrderIntent(text) {
+            // 檢查是否包含飲料名稱
+            const hasDrink = this.drinks.some(drink => text.includes(drink));
+            
+            // 如果只是飲料名稱，無需其他判斷
+            if (this.drinks.some(drink => text === drink)) {
+                return true;
+            }
+            
+            // 檢查是否包含甜度或冰塊關鍵詞
+            const sugarKeywords = ['全糖', '七分糖', '半糖', '三分糖', '微糖', '無糖'];
+            const iceKeywords = ['正常冰', '少冰', '微冰', '去冰', '熱', '溫', '常溫'];
+            
+            const hasSugarOption = sugarKeywords.some(option => text.includes(option));
+            const hasIceOption = iceKeywords.some(option => text.includes(option));
+            
+            // 檢查是否包含訂購關鍵詞
+            const orderKeywords = ['要', '買', '點', '杯', '來一杯', '訂', '喝', '一杯', '兩杯'];
+            const hasOrderKeyword = orderKeywords.some(keyword => text.includes(keyword));
+            
+            // 如果僅是飲料名稱而沒有其他內容，也算是點餐意圖
+            if (hasDrink && text.length < 15 && !text.includes('?') && !text.includes('？')) {
+                return true;
+            }
+            
+            // 一般情況下判斷是否為點餐意圖
+            return hasDrink && (hasOrderKeyword || hasSugarOption || hasIceOption);
+        }
+        
+        /**
+         * 分析訂單內容
+         * @param {string} text 用戶輸入
+         * @return {Promise} 訂單分析結果
+         */
+        async analyzeOrder(text) {
+            try {
+                // 通知開始處理
+                if (this.callbacks.onOrderProcessStart) {
+                    this.callbacks.onOrderProcessStart();
+                }
+                
+                this.state = 'analyzing';
+                console.log('分析訂單內容:', text);
+                
+                // 如果只包含飲料名稱，自動添加"一杯"前綴
+                const isDrinkOnly = this.drinks.some(drink => text.trim() === drink);
+                if (isDrinkOnly) {
+                    text = `一杯${text}`;
+                    console.log('修正純飲料名稱輸入:', text);
+                }
+                
+                // 發送到後端分析
+                const response = await fetch('/analyze_text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const result = await response.json();
+                console.log('訂單分析結果:', result);
+                
+                // 如果分析成功，保存訂單信息
+                if (result.status === 'success' && result.order_details && result.order_details.length > 0) {
+                    this.currentOrder = result.order_details;
+                    this.state = 'confirming';
+                    
+                    // 格式化訂單文本
+                    const orderText = this.formatOrderText(result.order_details);
+                    
+                    // 回調通知
+                    if (this.callbacks.onOrderProcessSuccess) {
+                        this.callbacks.onOrderProcessSuccess({
+                            orderDetails: result.order_details,
+                            orderText: orderText,
+                            message: `我幫您確認一下訂單：${orderText}\n\n請問確認訂購嗎？` 
+                        });
+                    }
+                    
+                    return {
+                        success: true,
+                        orderDetails: result.order_details,
+                        orderText: orderText
+                    };
+                } else {
+                    // 分析失敗
+                    this.state = 'idle';
+                    
+                    if (this.callbacks.onOrderProcessFail) {
+                        this.callbacks.onOrderProcessFail({
+                            message: result.message || '無法識別訂單內容'
+                        });
+                    }
+                    
+                    return {
+                        success: false,
+                        message: result.message || '訂單分析失敗'
+                    };
+                }
+            } catch (error) {
+                console.error('訂單分析錯誤:', error);
+                this.state = 'idle';
+                
+                if (this.callbacks.onOrderProcessFail) {
+                    this.callbacks.onOrderProcessFail({
+                        message: '訂單處理出錯'
+                    });
+                }
+                
+                return {
+                    success: false,
+                    message: '訂單處理出錯'
+                };
+            }
+        }
+        
+        /**
+         * 確認訂單
+         * @return {Promise} 訂單確認結果
+         */
+        async confirmOrder() {
+            try {
+                this.state = 'processing';
+                console.log('確認訂單:', this.currentOrder);
+                
+                if (!this.currentOrder) {
+                    return {
+                        success: false,
+                        message: '沒有待確認的訂單'
+                    };
+                }
+                
+                // 發送訂單到後端
+                const response = await fetch('/confirm_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_details: this.currentOrder })
+                });
+                
+                const result = await response.json();
+                console.log('訂單確認結果:', result);
+                
+                if (result.status === 'success') {
+                    this.orderConfirmed = true;
+                    this.orderNumber = result.order_number;
+                    this.fullOrderNumber = result.full_order_number || result.order_number;
+                    this.state = 'completed';
+                    
+                    // 計算等待時間 (每杯約3分鐘)
+                    let totalQuantity = 0;
+                    this.currentOrder.forEach(item => {
+                        totalQuantity += item.quantity || 1;
+                    });
+                    this.waitingTime = Math.max(3, totalQuantity * 3);
+                    
+                    // 更新訂單號和等待時間
+                    this.updateOrderDisplay();
+                    
+                    // 回調通知
+                    if (this.callbacks.onOrderConfirm) {
+                        this.callbacks.onOrderConfirm({
+                            success: true,
+                            orderNumber: this.orderNumber,
+                            waitingTime: this.waitingTime,
+                            message: `訂單已確認！您的取餐號碼是 ${this.orderNumber}，預計等候時間約 ${this.waitingTime} 分鐘，謝謝您的光臨。`
+                        });
+                    }
+                    
+                    return {
+                        success: true,
+                        orderNumber: this.orderNumber,
+                        waitingTime: this.waitingTime,
+                        message: `訂單已確認！您的取餐號碼是 ${this.orderNumber}，預計等候時間約 ${this.waitingTime} 分鐘，謝謝您的光臨。`
+                    };
+                } else {
+                    this.state = 'confirming';
+                    
+                    if (this.callbacks.onOrderConfirm) {
+                        this.callbacks.onOrderConfirm({
+                            success: false,
+                            message: result.message || '訂單確認失敗'
+                        });
+                    }
+                    
+                    return {
+                        success: false,
+                        message: result.message || '訂單確認失敗'
+                    };
+                }
+            } catch (error) {
+                console.error('訂單確認錯誤:', error);
+                this.state = 'confirming';
+                
+                if (this.callbacks.onOrderConfirm) {
+                    this.callbacks.onOrderConfirm({
+                        success: false,
+                        message: '訂單處理出錯'
+                    });
+                }
+                
+                return {
+                    success: false,
+                    message: '訂單處理出錯'
+                };
+            }
+        }
+        
+        /**
+         * 取消訂單
+         * @return {string} 取消訊息
+         */
+        cancelOrder() {
+            this.currentOrder = null;
+            this.orderConfirmed = false;
+            this.state = 'idle';
+            
+            if (this.callbacks.onOrderCancel) {
+                this.callbacks.onOrderCancel();
+            }
+            
+            return '訂單已取消，請問還需要其他飲料嗎？';
+        }
+        
+        /**
+         * 格式化訂單文字
+         * @param {Array} orderDetails 訂單詳情
+         * @return {string} 格式化的訂單文字
+         */
+        formatOrderText(orderDetails) {
+            if (!orderDetails || !Array.isArray(orderDetails)) return "";
+            
+            return orderDetails.map(item => {
+                const parts = [];
+                if (item.size) parts.push(item.size);
+                if (item.sugar) parts.push(item.sugar);
+                if (item.ice) parts.push(item.ice);
+                parts.push(item.drink_name);
+                
+                let orderText = parts.join('');
+                if (item.quantity > 1) {
+                    orderText += ` ${item.quantity}杯`;
+                }
+                return orderText;
+            }).join('、');
+        }
+        
+        /**
+         * 更新訂單顯示
+         */
+        updateOrderDisplay() {
+            try {
+                if (!this.orderNumber) return;
+                
+                // 更新訂單號顯示
+                const numberDisplay = document.querySelector('.number-display');
+                if (numberDisplay) {
+                    numberDisplay.textContent = this.orderNumber;
+                    numberDisplay.classList.add('flash');
+                    setTimeout(() => numberDisplay.classList.remove('flash'), 2000);
+                }
+                
+                // 更新等待時間顯示
+                const waitingTimeDisplay = document.querySelector('.waiting-time');
+                if (waitingTimeDisplay) {
+                    waitingTimeDisplay.textContent = `${this.waitingTime} 分鐘`;
+                    waitingTimeDisplay.classList.add('flash');
+                    setTimeout(() => waitingTimeDisplay.classList.remove('flash'), 2000);
+                }
+            } catch (error) {
+                console.error('更新訂單顯示錯誤:', error);
+            }
+        }
+        
+        /**
+         * 獲取當前訂單狀態
+         * @return {Object} 訂單狀態
+         */
+        getOrderState() {
+            return {
+                state: this.state,
+                hasActiveOrder: !!this.currentOrder,
+                isConfirmed: this.orderConfirmed,
+                orderNumber: this.orderNumber,
+                waitingTime: this.waitingTime
+            };
+        }
+        
+        /**
+         * 處理訂單狀態更新
+         * @param {Object} data 狀態數據
+         */
+        handleOrderStatusUpdate(data) {
+            if (!data || !data.order_number) return;
+            
+            // 檢查是否是當前訂單
+            const isCurrentOrder = 
+                this.orderNumber === data.order_number ||
+                this.fullOrderNumber === data.order_number ||
+                (this.orderNumber && data.order_number.includes(this.orderNumber)) ||
+                (this.fullOrderNumber && data.order_number.includes(this.fullOrderNumber));
+                
+            if (!isCurrentOrder) return;
+            
+            console.log('訂單狀態更新:', data);
+            
+            // 更新等待時間
+            if (data.status === 'preparing') {
+                this.waitingTime = Math.max(1, this.waitingTime - 2);
+            } else if (data.status === 'ready' || data.status === 'completed') {
+                this.waitingTime = 0;
+            }
+            
+            // 更新顯示
+            this.updateOrderDisplay();
+            
+            // 回調通知
+            if (this.callbacks.onOrderStatusUpdate) {
+                this.callbacks.onOrderStatusUpdate({
+                    status: data.status,
+                    orderNumber: this.orderNumber,
+                    waitingTime: this.waitingTime,
+                    message: this.getStatusMessage(data.status)
+                });
+            }
+        }
+        
+        /**
+         * 獲取狀態消息
+         * @param {string} status 狀態
+         * @return {string} 狀態消息
+         */
+        getStatusMessage(status) {
+            switch(status) {
+                case 'pending':
+                    return `您的訂單 ${this.orderNumber} 已進入處理佇列，請稍候。`;
+                case 'preparing':
+                    return `您的訂單 ${this.orderNumber} 正在製作中，預計等候時間約 ${this.waitingTime} 分鐘。`;
+                case 'ready':
+                    return `您的訂單 ${this.orderNumber} 已完成，請前往櫃檯取餐。`;
+                case 'completed':
+                    return `您的訂單 ${this.orderNumber} 已完成，感謝您的光臨。`;
+                default:
+                    return `您的訂單 ${this.orderNumber} 狀態已更新為: ${status}`;
+            }
+        }
+        
+        /**
+         * 初始化 Socket.IO 連接
+         */
+        initSocketIO() {
+            try {
+                if (typeof io !== 'function') {
+                    console.log('Socket.IO 尚未加載，將在頁面完全加載後嘗試連接');
+                    // 稍後再嘗試連接
+                    setTimeout(() => this.initSocketIO(), 2000);
+                    return;
+                }
+                
+                this.socket = io();
+                
+                // 監聽訂單狀態更新
+                this.socket.on('order_status_update', (data) => {
+                    this.handleOrderStatusUpdate(data);
+                });
+                
+                // 監聽訂單完成事件
+                this.socket.on('order_completed', (data) => {
+                    if (data.order_number === this.orderNumber || 
+                        data.order_number === this.fullOrderNumber) {
+                        this.handleOrderStatusUpdate({
+                            order_number: data.order_number,
+                            status: 'completed'
+                        });
+                    }
+                });
+                
+                console.log('Socket.IO 連接已初始化');
+            } catch (error) {
+                console.error('初始化 Socket.IO 時發生錯誤:', error);
+            }
+        }
+        
+        /**
+         * 監聽全局訂單事件
+         */
+        initEventListeners() {
+            try {
+                // 監聽訂單準備完成事件
+                window.addEventListener('orderPrepared', (event) => {
+                    console.log('收到訂單準備完成事件:', event.detail);
+                    
+                    // 設置訂單狀態為確認中
+                    this.currentOrder = event.detail.orderDetails;
+                    this.state = 'confirming';
+                    
+                    // 如果有必要，添加訂單確認UI
+                    this.ensureOrderConfirmationUI();
+                });
+                
+                console.log('訂單事件監聽器已初始化');
+            } catch (error) {
+                console.error('初始化事件監聽器時發生錯誤:', error);
+            }
+        }
+    
+        /**
+         * 確保訂單確認UI顯示
+         */
+        ensureOrderConfirmationUI() {
+            if (!this.currentOrder || this.state !== 'confirming') return;
+            
+            // 檢查是否已經顯示了訂單確認訊息
+            const chatMessages = document.getElementById('chatMessages');
+            if (!chatMessages) return;
+            
+            const confirmationExists = Array.from(chatMessages.querySelectorAll('.message.assistant')).some(
+                msg => msg.textContent.includes('確認一下訂單') && msg.textContent.includes('請問確認')
+            );
+            
+            if (!confirmationExists) {
+                console.log('訂單確認UI未顯示，手動添加');
+                const orderText = this.formatOrderText(this.currentOrder);
+                
+                // 如果有全局助手可用
+                if (window.assistant && typeof window.assistant.addMessage === 'function') {
+                    window.assistant.addMessage('assistant', 
+                        `我幫您確認一下訂單：${orderText}\n\n請問確認訂購嗎？`);
+                }
+            }
+        }
+    
+        /**
+         * 從API分析結果設置訂單
+         * @param {Object} result 分析結果
+         */
+        setOrderFromAnalysisResult(result) {
+            if (!result || !result.is_order) return false;
+            
+            if (result.order_details && Array.isArray(result.order_details) && result.order_details.length > 0) {
+                console.log('從分析結果設置訂單:', result.order_details);
+                this.currentOrder = result.order_details;
+                this.state = 'confirming';
+                
+                // 確保訂單確認UI顯示
+                this.ensureOrderConfirmationUI();
+                return true;
+            }
+            
+            return false;
+        }
+    }
+
+    // 創建並導出全局單例
+    if (!window.orderCore) {
+        console.log('正在創建全局 orderCore 實例...');
+        window.orderCore = new OrderCore();
+    }
+})(window);
+
+// 在頁面加載完成後確保 orderCore 已初始化
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('檢查 orderCore 是否已初始化');
+    if (!window.orderCore) {
+        console.warn('orderCore 尚未初始化，正在創建...');
+        window.orderCore = new window.OrderCore();
+    }
+    
+    // 將 orderCore 暴露給所有模塊
+    if (typeof window.defineOrderCore === 'function') {
+        window.defineOrderCore(window.orderCore);
+    }
+});
+
+// 設置一個標志，表示腳本已加載
+window.orderCoreLoaded = true;
+console.log('orderCore-global.js 已加載完成');

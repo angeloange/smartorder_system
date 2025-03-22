@@ -700,3 +700,63 @@ body > div > #waifu:not(.virtual-assistant-display #waifu) {
 .play-audio-btn i {
     font-size: 14px;
 }
+
+/* 添加到您的 CSS 文件中 */
+
+/* 表情樣式 */
+#waifu.emotion-idle {
+    transition: transform 0.3s ease;
+}
+
+#waifu.emotion-happy {
+    animation: happy-bounce 0.8s infinite alternate;
+}
+
+#waifu.emotion-thinking {
+    animation: thinking 3s infinite;
+}
+
+#waifu.emotion-confused {
+    animation: confused 0.8s infinite alternate;
+}
+
+#waifu.emotion-excited {
+    animation: excited 0.3s infinite alternate;
+}
+
+/* 說話動畫 */
+#waifu[data-speaking="true"] {
+    animation: speaking 0.3s infinite alternate !important;
+}
+
+#waifu.mouth-open #live2d {
+    transform: scale(1.01);
+}
+
+/* 動畫定義 */
+@keyframes happy-bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-5px); }
+}
+
+@keyframes thinking {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(1deg); }
+    75% { transform: rotate(-1deg); }
+    100% { transform: rotate(0deg); }
+}
+
+@keyframes confused {
+    from { transform: translateX(-2px); }
+    to { transform: translateX(2px); }
+}
+
+@keyframes excited {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
+}
+
+@keyframes speaking {
+    from { transform: translateY(0); }
+    to { transform: translateY(-2px); }
+}

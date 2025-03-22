@@ -1,0 +1,339 @@
+/* 聊天介面樣式 */
+
+.chat-interface {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    max-height: 100%;
+}
+
+.chat-header {
+    background-color: #4caf50;
+    color: white;
+    padding: 12px 15px;
+    text-align: center;
+}
+
+.chat-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.virtual-assistant-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    min-height: 180px; /* 減少最小高度 */
+    background-color: #f8f9fa;
+    position: relative;
+}
+
+.assistant-image {
+    max-width: 180px;
+    max-height: 180px;
+    display: none;
+}
+
+.assistant-image.active {
+    display: block;
+}
+
+/* 調整聊天訊息容器大小 */
+.chat-messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    background-color: #f5f5f5;
+    min-height: 350px; /* 增加最小高度 */
+    height: 40vh; /* 增加高度，使用視窗高度的40% */
+    max-height: 450px; /* 最大高度限制 */
+}
+
+/* 改進消息樣式 */
+.message {
+    margin-bottom: 15px;
+    padding: 12px 18px;
+    border-radius: 18px;
+    max-width: 85%;
+    word-wrap: break-word;
+    line-height: 1.5;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    animation: messageAppear 0.3s ease-out;
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message.user {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    margin-left: auto;
+    border-bottom-right-radius: 5px;
+    text-align: right;
+}
+
+.message.assistant {
+    background-color: #f1f8e9;
+    color: #33691e;
+    margin-right: auto;
+    border-bottom-left-radius: 5px;
+}
+
+.message-content {
+    white-space: pre-line;
+}
+
+/* 訂單確認消息特殊樣式 */
+.message.order-confirmation {
+    background-color: #e8f5e9;
+    border-left: 3px solid #4caf50;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+}
+
+/* 改進確認按鈕樣式 */
+.confirm-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    justify-content: center;
+}
+
+.confirm-btn, .cancel-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 25px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.confirm-btn {
+    background-color: #4caf50;
+    color: white;
+    box-shadow: 0 3px 6px rgba(76, 175, 80, 0.3);
+}
+
+.confirm-btn:hover {
+    background-color: #43a047;
+    box-shadow: 0 5px 10px rgba(76, 175, 80, 0.4);
+    transform: translateY(-2px);
+}
+
+.confirm-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+}
+
+.cancel-btn {
+    background-color: #f44336;
+    color: white;
+    box-shadow: 0 3px 6px rgba(244, 67, 54, 0.3);
+}
+
+.cancel-btn:hover {
+    background-color: #e53935;
+    box-shadow: 0 5px 10px rgba(244, 67, 54, 0.4);
+    transform: translateY(-2px);
+}
+
+.cancel-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(244, 67, 54, 0.2);
+}
+
+/* 訂單顯示區域的動畫 */
+.flash {
+    animation: flash-animation 1s;
+}
+
+@keyframes flash-animation {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(76, 175, 80, 0.3); }
+    100% { background-color: transparent; }
+}
+
+/* 訂單狀態標籤 */
+.order-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    margin-left: 5px;
+    font-weight: bold;
+}
+
+.order-status.pending { background-color: #fff9c4; color: #fbc02d; }
+.order-status.preparing { background-color: #bbdefb; color: #1976d2; }
+.order-status.ready { background-color: #c8e6c9; color: #388e3c; }
+.order-status.completed { background-color: #e0e0e0; color: #616161; }
+
+/* 底部信息區樣式改進 */
+.bottom-info {
+    display: flex;
+    padding: 10px 0;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.info-box {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+}
+
+.info-box h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #6c757d;
+}
+
+.number-display, .waiting-time {
+    font-size: 24px;
+    font-weight: bold;
+    color: #4caf50;
+    background-color: #f1f8e9;
+    padding: 10px;
+    border-radius: 5px;
+    display: inline-block;
+    min-width: 60px;
+    transition: all 0.3s;
+}
+
+/* 聊天建議按鈕樣式 */
+.chat-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 15px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #e0e0e0;
+}
+
+.suggestion-btn {
+    background-color: white;
+    border: 1px solid #4caf50;
+    border-radius: 18px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #4caf50;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-btn:hover {
+    background-color: #4caf50;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* 高亮文字樣式 */
+.highlight {
+    animation: highlightText 1.5s infinite;
+    font-weight: bold;
+    color: #e53935;
+}
+
+@keyframes highlightText {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* 輸入區域樣式 */
+.chat-input-area {
+    display: flex;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #e0e0e0;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chat-input-area input:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.chat-input-area button {
+    margin-left: 8px;
+    padding: 10px 15px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.chat-input-area button:hover {
+    background-color: #43a047;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.chat-input-area button:active {
+    transform: translateY(0);
+}
+
+.voice-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #4caf50;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.voice-btn:hover {
+    background-color: #43a047;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.voice-btn.recording {
+    animation: pulse 1.5s infinite;
+    background-color: #f44336;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
