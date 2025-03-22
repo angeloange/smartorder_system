@@ -316,7 +316,7 @@ def confirm_order():
     try:
         data = request.json
         order_details = data.get('order_details', [])
-        
+        order_details = convert_order_date_for_db(orders_list=order_details)
         if not order_details:
             return jsonify({'status': 'error', 'message': '訂單不能為空'})
         
@@ -343,7 +343,9 @@ def confirm_order():
         
         success_count = 0
         failed_orders = []
-        
+
+        weather, temperature = classify_weather(weather=get_weather_data()[2], weather_dict=weather_dict), get_weather_data()[3]
+
         for i, order in enumerate(expanded_orders):
             try:
                 # 嘗試3次插入，避免訂單號衝突
@@ -364,11 +366,11 @@ def confirm_order():
                             order.get('ice', '正常冰'), 
                             order.get('sugar', '全糖'),
                             order_date, order_time,
-                            'sunny', 25.0,
+                            weather, temperature,
                             'pending', order_numbers[i]
                         )
                         
-                        print(f"準備插入訂單，值為: {values}")
+                        print(f"準備插訂單，值為: {values}")
                         if db.execute(query, values):
                             success_count += 1
                             break  # 成功就跳出重試循環
