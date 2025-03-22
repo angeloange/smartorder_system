@@ -32,6 +32,14 @@
             debug: false,                  // 關閉除錯輸出
         };
     </script>
+    
+    <!-- 確保先加載基礎模塊 -->
+    <script type="module" src="{{ url_for('static', filename='js/orderCore.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/voiceManager.js') }}"></script>
+    
+    <!-- 然後加載依賴這些模塊的腳本 -->
+    <script type="module" src="{{ url_for('static', filename='js/assistantCore.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
 </head>
 <body>
     <div class="container">
@@ -61,6 +69,14 @@
                 <div class="chat-messages" id="chatMessages">
                     <!-- 對話內容會動態添加在這裡 -->
                 </div>
+                
+                <!-- 在聊天輸入區域前添加建議按鈕 -->
+                <div class="chat-suggestions">
+                    <button class="suggestion-btn">我想點珍珠奶茶</button>
+                    <button class="suggestion-btn">今天有什麼推薦？</button>
+                    <button class="suggestion-btn">請問菜單有哪些飲料？</button>
+                </div>
+                
                 <div class="chat-input-area">
                     <button id="chatVoiceBtn" class="voice-btn">
                         <i class="fas fa-microphone"></i>
@@ -431,6 +447,54 @@
                         loadlive2d("live2d", `https://live2d.fghrsh.net/api/get/?id=${window.live2d_settings.modelId}`);
                     }
                 };
+            }
+        });
+    </script>
+    
+    <!-- 添加以下 JavaScript 在底部 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 設置聊天建議按鈕
+            const suggestionBtns = document.querySelectorAll('.suggestion-btn');
+            suggestionBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const chatInput = document.getElementById('chatInput');
+                    if (chatInput) {
+                        chatInput.value = this.textContent;
+                        
+                        // 觸發發送按鈕的點擊
+                        const sendBtn = document.getElementById('chatSendBtn');
+                        if (sendBtn) {
+                            sendBtn.click();
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+
+    <!-- 添加到 body 底部 -->
+
+    <!-- 加載訂單測試工具 -->
+    <script type="module" src="{{ url_for('static', filename='js/orderTestTools.js') }}"></script>
+
+    <!-- 添加方便的測試按鈕（在開發模式下顯示） -->
+    <div id="testTools" style="position: fixed; bottom: 10px; right: 10px; z-index: 9999; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; display: none;">
+        <button onclick="window.orderTestTools.testOrderInput('一杯焦糖奶茶半糖少冰')" style="margin: 5px; padding: 5px 10px;">測試奶茶訂單</button>
+        <button onclick="window.orderTestTools.testOrderInput('一杯熱美式無糖')" style="margin: 5px; padding: 5px 10px;">測試咖啡訂單</button>
+        <button onclick="window.orderTestTools.checkOrderState()" style="margin: 5px; padding: 5px 10px;">檢查訂單狀態</button>
+        <button onclick="window.orderTestTools.attemptFix()" style="margin: 5px; padding: 5px 10px;">嘗試修復</button>
+    </div>
+
+    <script>
+        // 在開發模式下顯示測試工具
+        document.addEventListener('keydown', function(e) {
+            // 按 Alt+T 顯示/隱藏測試工具
+            if (e.altKey && e.key === 't') {
+                const testTools = document.getElementById('testTools');
+                if (testTools) {
+                    testTools.style.display = testTools.style.display === 'none' ? 'block' : 'none';
+                }
             }
         });
     </script>

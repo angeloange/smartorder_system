@@ -31,6 +31,9 @@ class OrderCore {
         
         // 初始化 Socket.IO
         this.initSocketIO();
+        
+        // 初始化訂單事件監聽器
+        this.initEventListeners();
     }
     
     /**
@@ -420,8 +423,75 @@ class OrderCore {
             console.error('初始化 Socket.IO 時發生錯誤:', error);
         }
     }
+    
+    /**
+     * 監聽全局訂單事件
+     */
+    initEventListeners() {
+        // 監聽訂單準備完成事件
+        window.addEventListener('orderPrepared', (event) => {
+            console.log('收到訂單準備完成事件:', event.detail);
+            
+            // 設置訂單狀態為確認中
+            this.currentOrder = event.detail.orderDetails;
+            this.state = 'confirming';
+            
+            // 如果有必要，添加訂單確認UI
+            this.ensureOrderConfirmationUI();
+        });
+        
+        // 監聽其他訂單相關事件
+        // ...existing code...
+    }
+
+    /**
+     * 確保訂單確認UI顯示
+     */
+    ensureOrderConfirmationUI() {
+        if (!this.currentOrder || this.state !== 'confirming') return;
+        
+        // 檢查是否已經顯示了訂單確認訊息
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+        
+        const confirmationExists = Array.from(chatMessages.querySelectorAll('.message.assistant')).some(
+            msg => msg.textContent.includes('確認一下訂單') && msg.textContent.includes('請問確認')
+        );
+        
+        if (!confirmationExists) {
+            console.log('訂單確認UI未顯示，手動添加');
+            const orderText = this.formatOrderText(this.currentOrder);
+            
+            // 如果有全局助手可用
+            if (window.assistant && typeof window.assistant.addMessage === 'function') {
+                window.assistant.addMessage('assistant', 
+                    `我幫您確認一下訂單：${orderText}\n\n請問確認訂購嗎？`);
+            }
+        }
+    }
+
+    /**
+     * 從API分析結果設置訂單
+     * @param {Object} result 分析結果
+     */
+    setOrderFromAnalysisResult(result) {
+        if (!result || !result.is_order) return false;
+        
+        if (result.order_details && Array.isArray(result.order_details) && result.order_details.length > 0) {
+            console.log('從分析結果設置訂單:', result.order_details);
+            this.currentOrder = result.order_details;
+            this.state = 'confirming';
+            
+            // 確保訂單確認UI顯示
+            this.ensureOrderConfirmationUI();
+            return true;
+        }
+        
+        return false;
+    }
 }
 
-// 導出為全局單例
-window.orderCore = new OrderCore();
-export default window.orderCore;
+// 創建全局實例並立即導出
+const orderCore = new OrderCore();
+window.orderCore = orderCore; // 確保在全局作用域可訪問
+export default orderCore;

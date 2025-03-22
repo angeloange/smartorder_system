@@ -356,14 +356,8 @@ class AssistantCore {
             return;
         }
         
-        // 檢查是否為點餐意圖
-        if (orderCore.isOrderIntent(input)) {
-            console.log('檢測到點餐意圖，開始處理訂單...');
-            await this.processOrder(input);
-        } else {
-            // 一般聊天處理
-            await this.processChatResponse(input);
-        }
+        // 使用聊天分析處理所有輸入
+        await this.processChatWithGPT(input);
     }
     
     /**
@@ -431,15 +425,14 @@ class AssistantCore {
     }
     
     /**
-     * 處理聊天回應
+     * 處理聊天回應並根據 GPT 分析決定是聊天還是訂單
      * @param {string} text 用戶輸入
      */
-    async processChatResponse(text) {
+    async processChatWithGPT(text) {
         try {
-            // 設置思考狀態
-            this.setState('thinking');
+            console.log('發送聊天分析請求:', text);
             
-            // 發送到後端分析
+            // 發送到後端 GPT 分析
             const response = await fetch('/analyze_chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -447,18 +440,61 @@ class AssistantCore {
             });
             
             const result = await response.json();
+            console.log('聊天分析結果:', result);
             
-            // 檢查是否有回應
-            if (result && result.reply) {
-                // 顯示回應
-                this.addMessage('assistant', result.reply);
+            // 檢查是否為訂單意圖
+            if (result.is_order === true) {
+                console.log('檢測到點餐意圖');
+                
+                // 如果有訂單詳情，設置訂單並顯示確認信息
+                if (result.order_details && Array.isArray(result.order_details) && result.order_details.length > 0) {
+                    console.log('訂單詳情:', result.order_details);
+                    
+                    // 設置訂單到 orderCore
+                    orderCore.currentOrder = result.order_details;
+                    orderCore.state = 'confirming';
+                    
+                    // 顯示訂單確認消息
+                    this.addMessage('assistant', result.reply);
+                    
+                    // 標記確認訊息已顯示
+                    this.orderConfirmationShown = true;
+                    
+                    // 觸發訂單準備完成事件
+                    this.dispatchEvent('orderPrepared', {
+                        orderDetails: result.order_details,
+                        orderText: result.order_text
+                    });
+                } else {
+                    // 有訂單意圖但沒有訂單詳情
+                    this.addMessage('assistant', result.reply);
+                }
             } else {
-                // 使用預設回應
-                this.addMessage('assistant', '抱歉，我不太理解您的意思。請問您想點什麼飲料呢？');
+                // 一般聊天回應
+                if (result.reply) {
+                    this.addMessage('assistant', result.reply);
+                } else {
+                    this.addMessage('assistant', '抱歉，我不太理解您的意思。請問您想喝什麼飲料呢？');
+                }
             }
         } catch (error) {
             console.error('處理聊天回應時出錯:', error);
             this.addMessage('assistant', '抱歉，系統暫時遇到問題，請稍後再試。');
+        } finally {
+            this.setState('idle');
+        }
+    }
+
+    /**
+     * 發送自定義事件
+     * @param {string} eventName 事件名稱
+     * @param {Object} data 事件數據
+     */
+    dispatchEvent(eventName, data) {
+        if (window.dispatchEvent && typeof CustomEvent === 'function') {
+            const event = new CustomEvent(eventName, { detail: data });
+            window.dispatchEvent(event);
+            console.log(`已發送事件: ${eventName}`, data);
         }
     }
 }

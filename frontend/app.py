@@ -94,28 +94,137 @@ def index():
 
 @app.route('/analyze_chat', methods=['POST'])
 def analyze_chat():
-    """處理一般對話功能"""
-    data = request.json
-    text = data.get('text', '')
-    
-    if not text:
-        return jsonify({'status': 'error', 'message': '未提供文字'}), 400
-    
-    # 分析聊天內容
-    result = chat_analyzer.analyze_chat(text)
-    
-    # 如果偵測到點餐意圖，交給 order_analyzer 處理
-    if result.get('is_order_intent', False) and 'drink' in text.lower():
+    """處理一般對話功能，通過 GPT API 判斷用戶意圖"""
+    try:
+        data = request.json
+        text = data.get('text', '')
+        
+        if not text:
+            return jsonify({'status': 'error', 'message': '未提供文字'}), 400
+        
+        # 先嘗試直接使用訂單分析器處理
         try:
-            # 嘗試使用訂單分析器解析內容
-            order_result = order_analyzer.analyze_order(text)
-            if isinstance(order_result, dict) and order_result.get('status') == 'success':
-                return jsonify(order_result)
+            # 預處理訂單文本
+            processed_text = preprocess_order_text(text)
+            
+            # 直接使用訂單分析器嘗試分析
+            app.logger.info(f"直接嘗試分析訂單: {processed_text}")
+            order_details = analyzer.analyze_order(processed_text)
+            
+            # 如果成功解析為訂單
+            if isinstance(order_details, list) and len(order_details) > 0:
+                app.logger.info(f"成功解析訂單: {order_details}")
+                
+                # 為訂單詳情添加默認值
+                for item in order_details:
+                    if 'size' not in item or not item['size']:
+                        item['size'] = '中杯'
+                    if 'ice' not in item or not item['ice']:
+                        item['ice'] = '正常冰'
+                    if 'sugar' not in item or not item['sugar']:
+                        item['sugar'] = '全糖'
+                    if 'quantity' not in item:
+                        item['quantity'] = 1
+                
+                # 將訂單格式化為易讀格式
+                formatted_order = format_order_text(order_details)
+                
+                # 直接返回訂單信息
+                return jsonify({
+                    'status': 'success',
+                    'is_order': True,
+                    'reply': f"我幫您確認一下訂單：{formatted_order}\n\n請問確認訂購嗎？",
+                    'order_details': order_details,
+                    'order_text': formatted_order
+                })
         except Exception as e:
-            app.logger.error(f"訂單分析失敗: {str(e)}")
+            app.logger.info(f"直接訂單分析失敗: {str(e)}")
+            # 如果直接分析失敗，繼續使用 GPT 分析
+        
+        # 使用 ChatAnalyzer (GPT API) 分析聊天內容和意圖
+        gpt_result = chat_analyzer.analyze_chat(text)
+        
+        # 檢查 GPT 是否將意圖識別為訂單
+        is_order_intent = gpt_result.get('intent') == 'order' or gpt_result.get('is_order_intent', False)
+        
+        app.logger.info(f"GPT 分析結果: 意圖={gpt_result.get('intent')}, 是否訂單={is_order_intent}")
+        
+        # 如果 GPT 判斷為點餐意圖，嘗試用訂單分析器處理
+        if is_order_intent:
+            app.logger.info(f"GPT 檢測到點餐意圖，處理訂單: {text}")
+            
+            # 使用訂單分析器分析訂單
+            try:
+                # 先預處理文本
+                processed_text = preprocess_order_text(text)
+                # 嘗試補充信息
+                enhanced_text = enhance_order_text(processed_text)
+                
+                app.logger.info(f"預處理後的訂單文本: {enhanced_text}")
+                order_details = analyzer.analyze_order(enhanced_text)
+                
+                # 檢查訂單分析結果
+                if isinstance(order_details, list) and len(order_details) > 0:
+                    # 成功解析訂單詳情
+                    app.logger.info(f"GPT引導後成功解析訂單: {order_details}")
+                    
+                    # 為訂單詳情添加默認值
+                    for item in order_details:
+                        if 'size' not in item or not item['size']:
+                            item['size'] = '中杯'
+                        if 'ice' not in item or not item['ice']:
+                            item['ice'] = '正常冰'
+                        if 'sugar' not in item or not item['sugar']:
+                            item['sugar'] = '全糖'
+                        if 'quantity' not in item:
+                            item['quantity'] = 1
+                    
+                    # 將訂單格式化為易讀格式
+                    formatted_order = format_order_text(order_details)
+                    
+                    return jsonify({
+                        'status': 'success',
+                        'is_order': True,
+                        'reply': f"我幫您確認一下訂單：{formatted_order}\n\n請問確認訂購嗎？",
+                        'order_details': order_details,
+                        'order_text': formatted_order
+                    })
+                else:
+                    # 訂單分析失敗，但確認是訂單意圖
+                    app.logger.info("GPT檢測為訂單意圖，但無法解析具體訂單")
+                    return jsonify({
+                        'status': 'success',
+                        'is_order': True,
+                        'reply': "看起來您想點餐，請告訴我您想要的飲料名稱、大小、甜度和冰量，例如：'一杯中杯半糖少冰珍珠奶茶'。",
+                        'order_details': None
+                    })
+            except Exception as e:
+                app.logger.error(f"GPT引導訂單分析失敗: {str(e)}")
+                # 訂單分析出錯，但確認是訂單意圖
+                return jsonify({
+                    'status': 'success',
+                    'is_order': True,
+                    'reply': "很抱歉，我無法完全理解您的訂單。請明確說明想要的飲料名稱，以及甜度和冰量。",
+                    'order_details': None
+                })
+        
+        # 如果不是點餐意圖，返回 GPT 回應
+        return jsonify({
+            'status': 'success',
+            'is_order': False,
+            'reply': gpt_result.get('reply', '我不太理解您的意思，請再說一次。')
+        })
     
-    # 返回聊天結果
-    return jsonify(result)
+    except Exception as e:
+        app.logger.error(f"處理聊天分析時發生錯誤: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            'status': 'error',
+            'message': f'處理失敗: {str(e)}',
+            'reply': '抱歉，系統暫時遇到問題，請稍後再試。'
+        })
 
 
 # 修改處理文字訂單的路由

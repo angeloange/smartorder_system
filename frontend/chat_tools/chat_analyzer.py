@@ -10,11 +10,12 @@ class ChatAnalyzer:
         load_dotenv()
         
         # 確保有 API 金鑰
-        if not os.getenv('OPENAI_API_KEY'):
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
             raise ValueError("未設置 OPENAI_API_KEY 環境變數")
             
         self.client = OpenAI(
-            api_key=os.getenv('OPENAI_API_KEY')
+            api_key=api_key
         )
         
         # 用於儲存對話歷史
@@ -30,26 +31,31 @@ class ChatAnalyzer:
             # 使用提供的歷史記錄或內部歷史記錄
             history = conversation_history if conversation_history else self.conversation_history
             
+            # 構建詳細的系統提示，幫助 GPT 更準確識別點餐意圖
+            system_prompt = """你是一個智慧點餐助手，位於飲料店內。你的主要目標是幫助客戶點餐。
+
+當用戶出現下列情況時，請判斷為點餐意圖：
+1. 明確提到特定飲料名稱，例如：珍珠奶茶、紅茶、綠茶等
+2. 使用點餐相關詞彙，例如：我要、我想喝、來一杯、點、訂購等
+3. 談論甜度或冰量，例如：半糖、少冰、無糖等
+4. 詢問菜單或推薦飲料時
+5. 表明想要購買或訂購的意願
+
+請以 JSON 格式回應，包含以下字段：
+{
+    "reply": "對用戶的友善回覆",
+    "intent": "chat 或 order",
+    "confidence": 0.0到1.0之間的數值
+}
+
+不要在回覆中提到你是AI或機器人。保持回覆簡短自然，像真人店員一樣。"""
+            
             # 構建 messages 序列
             messages = [
-                {"role": "system", "content": """你是一個智慧點餐助手，位於飲料店內。
-                請注意以下幾點：
-                1. 保持友好、活潑的對話風格
-                2. 對談話進行分類，區分是閒聊還是點餐意圖
-                3. 如果用戶詢問菜單或飲料，引導他們點餐
-                4. 如果是閒聊，適當回應後引導回點餐主題
-                5. 回答要簡短自然，像真人一樣
-                6. 不要說出自己是AI或機器人
-                7. 你必須以JSON格式回應，包含以下字段：
-                {
-                    "reply": "對用戶的回覆內容",
-                    "intent": "chat或order",
-                    "confidence": 0.0到1.0之間的數值
-                }
-                """}
+                {"role": "system", "content": system_prompt}
             ]
             
-            # 添加歷史對話，最多5輪
+            # 添加歷史對話，最多10輪
             for msg in history[-10:]:
                 messages.append({"role": msg["role"], "content": msg["content"]})
             
@@ -81,21 +87,22 @@ class ChatAnalyzer:
             if len(self.conversation_history) > 20:
                 self.conversation_history = self.conversation_history[-20:]
             
+            # 標準化回應
             return {
                 "status": "success",
                 "reply": response_data.get("reply", "我不太明白您的意思，能請您再說一次嗎？"),
                 "intent": response_data.get("intent", "chat"),
                 "confidence": response_data.get("confidence", 0.5),
-                "context": response_data.get("context", {}),
                 "is_order_intent": response_data.get("intent", "") == "order"
             }
             
         except Exception as e:
             self.logger.error(f"OpenAI API 錯誤: {str(e)}")
+            # API 發生錯誤時返回錯誤訊息
             return {
                 "status": "error",
                 "message": f"分析對話時發生錯誤: {str(e)}",
-                "reply": "抱歉，我現在遇到了一些問題，請稍後再試。",
+                "reply": "抱歉，我現在遇到了一些問題，請稍後再試或直接告訴我您想點什麼飲料。",
                 "intent": "error"
             }
             
