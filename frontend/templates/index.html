@@ -6,45 +6,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <script src="{{ url_for('static', filename='js/languages.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+    
+    <!-- 基礎函式庫 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
-    <script src="/static/js/orderCore.js"></script>
-    <script src="/static/js/assistant.js"></script>
-    <!-- 直接引入 Live2D 核心庫 -->
+    
+    <!-- Live2D 核心庫 -->
     <script src="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/live2d.min.js"></script>
     
-    <!-- 修改 Live2D 設置 -->
+    <!-- Live2D 設置 -->
     <script>
         // Live2D 設定
         window.live2d_settings = {
-            modelId: 1,                    // 模型ID (可以根據需要調整)
-            modelTexturesId: 3,            // 材質ID
-            waifuSize: '240x240',          // 調整模型大小
-            waifuTipsSize: '180x70',       // 提示框大小
-            waifuFontSize: '12px',         // 字體大小
-            showToolMenu: false,           // 隱藏工具選單
-            canSwitchModel: true,         // 禁止切換模型(改為false)
-            canSwitchTextures: true,      // 禁止切換材質(改為false)
-            waifuDraggable: 'disable',     // 禁止拖拽
-            hitokoto: false,               // 不顯示一言
-            debug: false,                  // 關閉除錯輸出
+            modelId: 1,                    
+            modelTexturesId: 3,            
+            waifuSize: '240x240',          
+            waifuTipsSize: '180x70',       
+            waifuFontSize: '12px',         
+            showToolMenu: false,           
+            canSwitchModel: true,          
+            canSwitchTextures: true,       
+            waifuDraggable: 'disable',     
+            hitokoto: false,               
+            debug: false,                  
         };
     </script>
     
-    <!-- 確保只加載一次每個腳本 -->
+    <!-- Azure 語音 SDK (確保最先加載) -->
+    <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+    
+    <!-- 應用腳本 (按照依賴順序加載) -->
     <script src="{{ url_for('static', filename='js/languages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voiceManager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/orderCore.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
-    
-    <!-- 確保先加載基礎模塊 -->
-    <script type="module" src="{{ url_for('static', filename='js/orderCore.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/voiceManager.js') }}"></script>
-    
-    <!-- 然後加載依賴這些模塊的腳本 -->
-    <script type="module" src="{{ url_for('static', filename='js/assistantCore.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
     <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
 </head>
 <body>

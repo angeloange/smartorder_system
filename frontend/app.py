@@ -16,6 +16,7 @@ from weather_API.weather_API import weather_dict ,classify_weather, get_weather_
 from flask_socketio import SocketIO  # 添加這行
 from frontend.codes.speech import speech_bp
 from chat_tools.chat_analyzer import ChatAnalyzer
+import re
 
 
 # 初始化 Flask 應用
@@ -90,6 +91,25 @@ def temp_audio(filename):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+# 在 app.py 中添加此路由
+@app.route('/azure_credentials')
+def azure_credentials():
+    """提供 Azure 語音服務憑證給前端"""
+    # 從環境變數獲取 Azure 憑證
+    key = os.environ.get('AZURE_SPEECH_KEY', '')
+    region = os.environ.get('AZURE_SPEECH_REGION', 'eastasia')
+    
+    if key:
+        app.logger.info('成功提供 Azure 語音憑證')
+    else:
+        app.logger.warning('未找到 Azure 語音憑證')
+    
+    return jsonify({
+        'key': key,
+        'region': region
+    })
 
 def format_order_text(order_details):
     """格式化訂單詳情為人類可讀文本"""
@@ -310,52 +330,57 @@ def get_last_order_number(db_instance):
         return None
 
 def generate_order_number(db, count=1):
-    """生成新的訂單號碼，確保唯一性"""
-    import random
-    import time
+    """生成新的訂單號碼，確保唯一性和序列性"""
+    
     today = datetime.now().strftime('%m%d')
-    # 生成所有訂單號碼
-    order_numbers = []
-    max_attempts = 5
-    for i in range(count):
-        # 在每個循環中重新查詢最後訂單號，確保最新
-        last_number = get_last_order_number(db)
-        attempts = 0
-        while attempts < max_attempts:
-            # 基本號碼生成邏輯
-            if not last_number:
-                letter = chr(65 + random.randint(0, 25))  # A-Z隨機一個字母
-                number = random.randint(1, 9)  # 1-9隨機一個數字
-                base_number = f'{today}{letter}{number}'
-            else:
-                # 從完整訂單號碼中提取字母和數字
-                if '-' in last_number:
-                    base_last = last_number.split('-')[0]
-                else:
-                    base_last = last_number
-                # 提取字母和數字部分，但增加隨機性
-                letter = chr(65 + random.randint(0, 25))  # 隨機字母代替遞增
-                number = random.randint(1, 9)  # 隨機數字
-                base_number = f'{today}{letter}{number}'
-            # 添加時間戳微秒部分作為唯一標識
-            unique_suffix = str(int(time.time() * 1000) % 10000)
-            new_number = f"{base_number}-{unique_suffix}"
+    
+    # 獲取最後一筆訂單號碼
+    last_number = get_last_order_number(db)
+    
+    # 確定下一個字母和數字
+    if not last_number or not last_number.startswith(today):
+        # 今天第一筆訂單，從 A1 開始
+        letter = 'A'
+        number = 1
+    else:
+        try:
+            # 從訂單號提取字母和數字部分
+            base_part = last_number.split('-')[0] if '-' in last_number else last_number
+            pattern = r'\d{4}([A-Z])(\d)'
+            match = re.search(pattern, base_part)
             
-            # 檢查訂單號是否已存在
-            query = "SELECT 1 FROM orders WHERE order_number = %s LIMIT 1"
-            result = db.fetchone(query, (new_number,))
-            if not result:
-                # 訂單號不存在，可以使用
-                order_numbers.append(new_number)
-                break
-            attempts += 1
-            # 短暫延遲以避免時間戳完全相同
-            time.sleep(0.01)
-        if attempts >= max_attempts:
-            # 如果嘗試多次仍失敗，使用更長的隨機字符串
-            fallback = f"{today}{chr(65 + random.randint(0, 25))}{random.randint(1, 9)}-{str(uuid.uuid4())[:8]}"
-            order_numbers.append(fallback)
-    return order_numbers
+            if match:
+                letter = match.group(1)  # 字母部分
+                number = int(match.group(2))  # 數字部分
+                
+                # 計算下一個字母和數字
+                number += 1
+                if number > 9:
+                    number = 1
+                    letter = chr(ord(letter) + 1)
+                    # 如果超過Z，回到A
+                    if letter > 'Z':
+                        letter = 'A'
+            else:
+                # 匹配失敗，使用默認值
+                letter = 'A'
+                number = 1
+        except Exception as e:
+            print(f"解析訂單號時出錯: {str(e)}, 使用默認值")
+            letter = 'A'
+            number = 1
+    
+    # 基礎訂單號
+    base_order_number = f"{today}{letter}{number}"
+    
+    # 生成所有訂單號碼（依據杯數添加後綴）
+    order_numbers = []
+    for i in range(count):
+        item_order_number = f"{base_order_number}-{i+1}"
+        order_numbers.append(item_order_number)
+    
+    return base_order_number, order_numbers
+
 
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
@@ -381,10 +406,11 @@ def confirm_order():
                 expanded_orders.append(order_item)
         
         # 生成符合規定的訂單號碼
-        base_order_number = generate_order_number(db, len(expanded_orders))
+        base_order_number, item_order_numbers = generate_order_number(db, len(expanded_orders))
         if not base_order_number:
             return jsonify({'status': 'error', 'message': '無法生成訂單號碼'})
-        
+        display_number = base_order_number[4:] if len(base_order_number) >= 6 else base_order_number
+
         # 取得當前時間
         now = datetime.now()
         order_date = now.date()

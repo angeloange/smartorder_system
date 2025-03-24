@@ -26,6 +26,24 @@
             const messageEl = document.createElement('div');
             messageEl.className = `message ${type}`;
             
+            // 如果是助手訊息，使用語音播放 - 嘗試多種方式調用
+            if (type === 'assistant') {
+                // 獲取純文本（去除HTML標記）
+                const plainText = text.replace(/<[^>]*>/g, '');
+                
+                // 請求強制播放語音
+                console.log('請求播放語音:', plainText);
+                
+                // 方法1: 使用全局 voiceManager
+                if (window.voiceManager && typeof window.voiceManager.speak === 'function') {
+                    console.log('使用 window.voiceManager 播放');
+                    window.voiceManager.speak(plainText);
+                }
+                
+                // 添加語音指示器
+                messageEl.classList.add('speaking');
+            }
+            
             // 檢查是否為訂單確認訊息
             const isOrderConfirmation = type === 'assistant' && 
                                      text.includes('確認一下訂單') && 
@@ -379,11 +397,6 @@
                 chatAssistant.classList.add(emotion);
             }
         },
-        /**
-         * 檢測是否直接是飲料訂單
-         * @param {string} text 用戶輸入
-         * @return {boolean} 是否為飲料訂單
-         */
 
         /**
          * 處理訂單輸入
@@ -488,6 +501,81 @@
                 }
             });
         }
+        
+        // 添加語音指示器樣式
+        const style = document.createElement('style');
+        style.textContent = `
+            .message.assistant.speaking {
+                position: relative;
+            }
+            .message.assistant.speaking::after {
+                content: '';
+                position: absolute;
+                right: 10px;
+                top: 10px;
+                width: 8px;
+                height: 8px;
+                background-color: #4CAF50;
+                border-radius: 50%;
+                animation: pulse 1s infinite;
+            }
+            @keyframes pulse {
+                0% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.5; transform: scale(1.2); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // 註冊語音管理器回調函數
+        if (window.voiceManager && typeof window.voiceManager.registerCallbacks === 'function') {
+            window.voiceManager.registerCallbacks({
+                onSpeakStart: function() {
+                    // 語音開始時的視覺效果
+                    const chatAssistant = document.querySelector('.chat-assistant');
+                    if (chatAssistant) {
+                        chatAssistant.classList.add('speaking');
+                    }
+                },
+                onSpeakEnd: function() {
+                    // 語音結束時的視覺效果
+                    const chatAssistant = document.querySelector('.chat-assistant');
+                    if (chatAssistant) {
+                        chatAssistant.classList.remove('speaking');
+                    }
+                    
+                    // 移除訊息的說話指示器
+                    const speakingMessage = document.querySelector('.message.assistant.speaking');
+                    if (speakingMessage) {
+                        speakingMessage.classList.remove('speaking');
+                    }
+                }
+            });
+        }
+        
+        // 初始化聲音解鎖（解決移動設備上的問題）
+        function unlockAudio() {
+            // 創建並播放一個靜音的音頻
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const buffer = audioContext.createBuffer(1, 1, 22050);
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+            
+            // 使用 Web Speech API 解鎖
+            if (window.speechSynthesis) {
+                const utterance = new SpeechSynthesisUtterance('');
+                utterance.volume = 0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // 在用戶首次點擊時解鎖音頻
+        document.addEventListener('click', function audioUnlock() {
+            unlockAudio();
+            document.removeEventListener('click', audioUnlock);
+        }, { once: true });
         
         // 添加歡迎訊息
         setTimeout(function() {

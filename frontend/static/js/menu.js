@@ -15,7 +15,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const voiceInputMode = document.getElementById('voiceInputMode');
     const langToggle = document.getElementById('langToggle');
     const waitingTimeElement = document.querySelector('.waiting-time');
-    const virtualAssistant = new VirtualAssistant();
+    const virtualAssistant = window.assistant || {
+        addMessage: function(type, text) {
+            console.log(`[菜單] ${type}: ${text}`);
+        }
+    };
     let currentLang = 'zh-TW';
     let isVoiceMode = false;
 

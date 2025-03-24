@@ -500,4 +500,4 @@ class AssistantCore {
 }
 
 // 導出助手核心
-export default AssistantCore;
+window.orderCore = orderCore; // 只保留這一行，移除 export

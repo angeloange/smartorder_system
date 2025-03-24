@@ -476,4 +476,3 @@ class OrderCore {
 // 創建全局實例並立即導出
 const orderCore = new OrderCore();
 window.orderCore = orderCore; // 確保在全局作用域可訪問
-export default orderCore;
