@@ -760,3 +760,95 @@ body > div > #waifu:not(.virtual-assistant-display #waifu) {
     from { transform: translateY(0); }
     to { transform: translateY(-2px); }
 }
+
+
+/* 添加到 menu.css */
+.message.order-confirmation {
+    background-color: #FFF8E1;
+    border-left: 4px solid #FFC107;
+}
+
+.message.order-completed {
+    background-color: #E8F5E9;
+    border-left: 4px solid #4CAF50;
+}
+
+.confirm-buttons {
+    display: flex;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.confirm-buttons button {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.confirm-buttons .confirm-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.confirm-buttons .cancel-btn {
+    background-color: #F44336;
+    color: white;
+}
+
+.confirm-buttons button:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.confirm-buttons button:active {
+    transform: translateY(0);
+}
+
+.order-number {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #FF5722;
+    background: #FFF3E0;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.confirm-buttons {
+    display: flex;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.confirm-buttons button {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.confirm-buttons .confirm-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.confirm-buttons .cancel-btn {
+    background-color: #F44336;
+    color: white;
+}
+
+.message.order-confirmation {
+    background-color: #FFF8E1;
+    border-left: 4px solid #FFC107;
+}
+
+.message.order-completed {
+    background-color: #E8F5E9;
+    border-left: 4px solid #4CAF50;
+}

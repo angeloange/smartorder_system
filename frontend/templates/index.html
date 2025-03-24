@@ -11,7 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
-    
+    <script src="/static/js/orderCore.js"></script>
+    <script src="/static/js/assistant.js"></script>
     <!-- 直接引入 Live2D 核心庫 -->
     <script src="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/live2d.min.js"></script>
     
@@ -32,6 +33,11 @@
             debug: false,                  // 關閉除錯輸出
         };
     </script>
+    
+    <!-- 確保只加載一次每個腳本 -->
+    <script src="{{ url_for('static', filename='js/languages.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/orderCore.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
     
     <!-- 確保先加載基礎模塊 -->
     <script type="module" src="{{ url_for('static', filename='js/orderCore.js') }}"></script>

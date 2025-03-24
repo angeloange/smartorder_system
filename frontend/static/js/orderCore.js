@@ -170,17 +170,8 @@ class OrderCore {
      */
     async confirmOrder() {
         try {
-            this.state = 'processing';
-            console.log('確認訂單:', this.currentOrder);
+            // ...現有代碼...
             
-            if (!this.currentOrder) {
-                return {
-                    success: false,
-                    message: '沒有待確認的訂單'
-                };
-            }
-            
-            // 發送訂單到後端
             const response = await fetch('/confirm_order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -188,74 +179,33 @@ class OrderCore {
             });
             
             const result = await response.json();
-            console.log('訂單確認結果:', result);
+            console.log('後端訂單確認結果:', result);
             
             if (result.status === 'success') {
-                this.orderConfirmed = true;
+                // 保存訂單編號
                 this.orderNumber = result.order_number;
-                this.fullOrderNumber = result.full_order_number || result.order_number;
-                this.state = 'completed';
-                
-                // 計算等待時間 (每杯約3分鐘)
-                let totalQuantity = 0;
-                this.currentOrder.forEach(item => {
-                    totalQuantity += item.quantity || 1;
-                });
-                this.waitingTime = Math.max(3, totalQuantity * 3);
-                
-                // 更新訂單號和等待時間 - 不再立即顯示取餐號碼，等後台通知
-                // 僅顯示等待時間，取餐號碼等待後台Socket.io通知
-                this.updateWaitingTimeDisplay();
-                
-                // 回調通知
-                if (this.callbacks.onOrderConfirm) {
-                    this.callbacks.onOrderConfirm({
-                        success: true,
-                        orderNumber: this.orderNumber,
-                        waitingTime: this.waitingTime,
-                        message: `訂單已確認！您的訂單正在製作中，預計等候時間約 ${this.waitingTime} 分鐘。完成後會在取餐號碼區域通知您。`
-                    });
-                }
+                this.state = 'confirmed';
                 
                 return {
                     success: true,
+                    message: result.message || `訂單已確認！您的取餐號碼是 ${this.orderNumber}，謝謝您的光臨。`,
                     orderNumber: this.orderNumber,
-                    waitingTime: this.waitingTime,
-                    message: `訂單已確認！您的訂單正在製作中，預計等候時間約 ${this.waitingTime} 分鐘。完成後會在取餐號碼區域通知您。`
+                    waitingTime: '3分鐘'
                 };
             } else {
-                this.state = 'confirming';
-                
-                if (this.callbacks.onOrderConfirm) {
-                    this.callbacks.onOrderConfirm({
-                        success: false,
-                        message: result.message || '訂單確認失敗'
-                    });
-                }
-                
                 return {
                     success: false,
-                    message: result.message || '訂單確認失敗'
+                    message: result.message || '訂單確認失敗，請稍後再試。'
                 };
             }
         } catch (error) {
-            console.error('訂單確認錯誤:', error);
-            this.state = 'confirming';
-            
-            if (this.callbacks.onOrderConfirm) {
-                this.callbacks.onOrderConfirm({
-                    success: false,
-                    message: '訂單處理出錯'
-                });
-            }
-            
+            console.error('確認訂單時出錯:', error);
             return {
                 success: false,
-                message: '訂單處理出錯'
+                message: '處理訂單請求時出現錯誤，請稍後再試。'
             };
         }
     }
-    
     /**
      * 取消訂單
      * @return {string} 取消訊息
