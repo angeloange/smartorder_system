@@ -101,7 +101,7 @@
                 const ssml = `
                     <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-TW">
                         <voice name="zh-TW-HsiaoChenNeural">
-                            <prosody rate="+10%" volume="+100%">${text}</prosody>
+                            <prosody rate="+25%" volume="+100%">${text}</prosody>
                         </voice>
                     </speak>
                 `;
