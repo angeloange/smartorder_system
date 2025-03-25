@@ -715,19 +715,29 @@
     // 自動解鎖音頻，兼容移動設備
     function unlockAudio() {
         try {
-            // 創建並播放靜音音頻
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // 嘗試創建音頻上下文來解鎖音頻
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioContext = new AudioContext();
             const buffer = audioContext.createBuffer(1, 1, 22050);
             const source = audioContext.createBufferSource();
             source.buffer = buffer;
             source.connect(audioContext.destination);
             source.start(0);
+            
+            // 解鎖 Web Speech API
+            if (window.speechSynthesis) {
+                const utterance = new SpeechSynthesisUtterance('');
+                utterance.volume = 0;
+                window.speechSynthesis.speak(utterance);
+            }
+            
+            console.log('音頻已解鎖 ✓');
         } catch (e) {
-            console.log('解鎖音頻失敗:', e);
+            console.warn('音頻解鎖失敗:', e);
         }
     }
 
-    // 在任何用戶交互時解鎖音頻
+    // 在用戶第一次點擊時解鎖音頻
     document.addEventListener('click', unlockAudio, { once: true });
     document.addEventListener('touchstart', unlockAudio, { once: true });
 

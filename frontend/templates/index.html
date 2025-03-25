@@ -7,7 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    
+    <!-- 添加到 <head> 部分 -->
+    <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
     <!-- 基礎函式庫 -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
@@ -34,7 +35,6 @@
     </script>
     
     <!-- Azure 語音 SDK (確保最先加載) -->
-    <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
     
     <!-- 應用腳本 (按照依賴順序加載) -->
     <script src="{{ url_for('static', filename='js/languages.js') }}"></script>
