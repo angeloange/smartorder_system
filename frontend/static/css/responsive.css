@@ -17,59 +17,130 @@
         width: 100% !important;
         height: auto !important;
         min-height: unset !important;
+        padding: 15px !important;
     }
     
-    /* 虛擬助手區域核心修正 - 確保人偶完美置中 */
+    /* 修正虛擬助手顯示區域，確保內容完整顯示 */
     .virtual-assistant-display {
+        position: relative !important;
+        width: 100% !important; /* 寬度自適應 */
+        height: auto !important; /* 高度自適應 */
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+        min-height: 220px !important; /* 最小高度確保容納模型 */
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        height: auto !important;
-        width: 100% !important;
-        position: relative !important;
     }
     
-    /* 關鍵修正: Live2D模型容器置中 */
-    #waifu, 
-    .live2d-container {
-        position: relative !important;
-        width: 180px !important;
-        height: 180px !important;
+    /* 模型容器置中顯示 */
+    #waifu, .live2d-container {
+        width: 200px !important;
+        height: 200px !important;
+        position: relative !important; /* 使用相對定位 */
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
         margin: 0 auto !important;
-        left: 0 !important;
-        right: 0 !important;
-        transform: none !important;
     }
     
-    /* 確保Live2D模型本身置中 */
+    /* 修正 Live2D 模型本身的顯示 */
     #live2d {
-        position: relative !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
+        width: 200px !important;
+        height: 200px !important;
+        transform: scale(1.0) !important; /* 不縮放，保持原始大小 */
+        transform-origin: center center !important;
+    }
+    
+    /* 確保聊天界面可正常顯示 */
+    .chat-messages {
+        min-height: 250px !important;
+        max-height: 300px !important;
+    }
+    
+    /* 菜單網格調整為兩列 */
+    .menu-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
     }
 }
 
-/* 手機橫屏模式特殊處理 */
+/* 手機橫屏模式處理 */
 @media screen and (max-width: 896px) and (orientation: landscape) {
-    /* 恢復左右排列但比例調整 */
+    /* 恢復左右排列 */
     .container {
         flex-direction: row !important;
         height: 100vh !important;
+        overflow: hidden !important;
     }
     
     .interaction-panel {
         width: 45% !important;
         height: 100% !important;
+        overflow-y: auto !important;
     }
     
     .menu-panel {
         width: 55% !important;
         height: 100% !important;
+        overflow-y: auto !important;
     }
     
-    /* 虛擬助手調小 */
+    /* 調整虛擬助手顯示區域 */
+    .virtual-assistant-display {
+        min-height: 140px !important;
+        height: auto !important;
+    }
+    
+    /* 調整模型尺寸 */
     #waifu, .live2d-container {
         width: 140px !important;
         height: 140px !important;
+    }
+    
+    #live2d {
+        width: 140px !important;
+        height: 140px !important;
+    }
+}
+
+/* 較小螢幕的iPhone (如SE系列) 調整 */
+@media screen and (max-width: 375px) {
+    /* 菜單保持兩列但調整間距 */
+    .menu-grid {
+        gap: 5px !important;
+    }
+    
+    /* 確保虛擬助手完整顯示 */
+    .virtual-assistant-display {
+        min-height: 180px !important;
+    }
+    
+    /* 稍微縮小模型 */
+    #waifu, .live2d-container {
+        width: 180px !important;
+        height: 180px !important;
+    }
+    
+    #live2d {
+        width: 180px !important;
+        height: 180px !important;
+    }
+    
+    /* 調整聊天區域高度 */
+    .chat-messages {
+        min-height: 200px !important;
+        max-height: 250px !important;
+    }
+}
+
+/* 確保語言切換按鈕在手機上始終可見 */
+@media screen and (max-width: 480px) {
+    .bottom-language-switch {
+        position: fixed !important;
+        bottom: 10px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 999 !important;
     }
 }
