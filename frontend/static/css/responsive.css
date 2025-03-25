@@ -1,0 +1,75 @@
+/* 智慧點餐系統 - 專為手機螢幕設計的響應式樣式 */
+
+/* 默認保持iPad和電腦版面完全不變 */
+
+/* 僅當螢幕寬度小於480px時啟用手機版面 */
+@media screen and (max-width: 480px) {
+    /* 主容器改為垂直排列 */
+    .container {
+        flex-direction: column !important;
+        height: auto !important;
+        width: 100% !important;
+        padding: 10px !important;
+    }
+    
+    /* 左右面板改為上下排列，各占滿寬度 */
+    .interaction-panel, .menu-panel {
+        width: 100% !important;
+        height: auto !important;
+        min-height: unset !important;
+    }
+    
+    /* 虛擬助手區域核心修正 - 確保人偶完美置中 */
+    .virtual-assistant-display {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        height: auto !important;
+        width: 100% !important;
+        position: relative !important;
+    }
+    
+    /* 關鍵修正: Live2D模型容器置中 */
+    #waifu, 
+    .live2d-container {
+        position: relative !important;
+        width: 180px !important;
+        height: 180px !important;
+        margin: 0 auto !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+    }
+    
+    /* 確保Live2D模型本身置中 */
+    #live2d {
+        position: relative !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+    }
+}
+
+/* 手機橫屏模式特殊處理 */
+@media screen and (max-width: 896px) and (orientation: landscape) {
+    /* 恢復左右排列但比例調整 */
+    .container {
+        flex-direction: row !important;
+        height: 100vh !important;
+    }
+    
+    .interaction-panel {
+        width: 45% !important;
+        height: 100% !important;
+    }
+    
+    .menu-panel {
+        width: 55% !important;
+        height: 100% !important;
+    }
+    
+    /* 虛擬助手調小 */
+    #waifu, .live2d-container {
+        width: 140px !important;
+        height: 140px !important;
+    }
+}
