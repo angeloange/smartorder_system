@@ -870,3 +870,326 @@ body > div > #waifu:not(.virtual-assistant-display #waifu) {
 .chat-interface {
     gap: 0 !important;
 }
+
+
+
+/* 極簡自然風 - 基本變數 */
+:root {
+    --primary-color: #7A9E7E;       /* 淺綠主色 */
+    --secondary-color: #94B9AF;     /* 輔助綠色 */
+    --accent-color: #E9B44C;        /* 暖黃點綴 */
+    --text-primary: #40514E;        /* 主要文字 */
+    --text-secondary: #5D7D89;      /* 次要文字 */
+    --background-color: #F7F9F7;    /* 背景色 */
+    --panel-bg: #FFFFFF;            /* 面板背景 */
+    --border-color: #E0E5E0;        /* 邊框顏色 */
+    --success-color: #8AAD92;       /* 成功綠 */
+    --warning-color: #E2C391;       /* 警告黃 */
+    --error-color: #C27D7F;         /* 錯誤紅 */
+    --shadow: 0 8px 24px rgba(149, 166, 155, 0.1); /* 陰影 */
+  }
+  
+  /* 全局樣式 */
+  body {
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    font-family: 'Noto Sans TC', 'Roboto', sans-serif;
+  }
+  
+  /* 容器樣式 */
+  .container {
+    background: var(--panel-bg);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+  }
+  
+  /* 面板樣式 */
+  .interaction-panel, .menu-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* 標題樣式 */
+  h2, h3 {
+    color: var(--primary-color);
+    font-weight: 500;
+  }
+  
+  .menu-section h2 {
+    position: relative;
+    padding-bottom: 12px;
+    text-align: center;
+  }
+  
+  .menu-section h2:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: var(--accent-color);
+    border-radius: 2px;
+  }
+  
+  /* 菜單網格布局 */
+  .menu-grid {
+    gap: 18px;
+  }
+  
+  .category {
+    background: var(--background-color);
+    border-radius: 16px;
+    padding: 16px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .category:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+  }
+  
+  .item {
+    background: var(--panel-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    transition: all 0.2s ease;
+  }
+  
+  .item:hover {
+    border-color: var(--secondary-color);
+    transform: scale(1.02);
+  }
+  
+  /* 底部信息框 */
+  .info-box {
+    background: var(--background-color);
+    border-radius: 16px;
+    border: none;
+  }
+  
+  .info-box h3 {
+    color: var(--primary-color);
+    font-size: 1rem;
+    position: relative;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+  
+  .info-box h3:after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--accent-color);
+    border-radius: 2px;
+  }
+  
+  .number-display {
+    color: var(--primary-color);
+    font-size: 1.8em;
+    background: white;
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  }
+  
+  /* 按鈕樣式 */
+  .btn-primary {
+    background: var(--primary-color);
+    color: white;
+    border-radius: 12px;
+    border: none;
+    padding: 12px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-primary:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 確認取消按鈕 */
+  .confirm-buttons {
+    gap: 15px;
+  }
+  
+  .confirm-btn, .btn-confirm {
+    background-color: var(--success-color);
+    color: white;
+    border-radius: 12px;
+    font-weight: 500;
+    box-shadow: 0 3px 6px rgba(138, 173, 146, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .confirm-btn:hover, .btn-confirm:hover {
+    background-color: #79996E;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(138, 173, 146, 0.3);
+  }
+  
+  .cancel-btn, .btn-cancel {
+    background-color: var(--error-color);
+    color: white;
+    border-radius: 12px;
+    font-weight: 500;
+    box-shadow: 0 3px 6px rgba(194, 125, 127, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .cancel-btn:hover, .btn-cancel:hover {
+    background-color: #B06D6F;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(194, 125, 127, 0.3);
+  }
+  
+  /* 聊天界面 */
+  .chat-interface {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+  
+  .chat-header {
+    background-color: var(--primary-color);
+    padding: 14px;
+  }
+  
+  .chat-messages {
+    background-color: #F9FBF9;
+    padding: 16px;
+  }
+  
+  .message {
+    border-radius: 16px;
+    padding: 12px 16px;
+    max-width: 80%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+    margin-bottom: 12px;
+  }
+  
+  .message.user {
+    background-color: #E8F1EA;
+    color: var(--text-primary);
+  }
+  
+  .message.assistant {
+    background-color: var(--panel-bg);
+    color: var(--text-primary);
+    border-left: 3px solid var(--secondary-color);
+  }
+  
+  .message.order-confirmation {
+    background-color: #F7F2E4;
+    border-left: 3px solid var(--accent-color);
+  }
+  
+  .message.order-completed {
+    background-color: #ECFAEF;
+    border-left: 3px solid var(--success-color);
+  }
+  
+  /* 輸入區域 */
+  .chat-input-area {
+    padding: 12px;
+    background-color: #F9FBF9;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  #chatInput {
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 10px 16px;
+    transition: all 0.3s ease;
+  }
+  
+  #chatInput:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(148, 185, 175, 0.2);
+    outline: none;
+  }
+  
+  /* 語音按鈕 */
+  .voice-btn {
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .voice-btn:hover {
+    background-color: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+  }
+  
+  .voice-btn.recording {
+    background-color: var(--error-color);
+    animation: gentle-pulse 1.5s infinite;
+  }
+  
+  @keyframes gentle-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(194, 125, 127, 0.5); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(194, 125, 127, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(194, 125, 127, 0); }
+  }
+  
+  /* 虛擬助手顯示區 */
+  .virtual-assistant-display {
+    background-color: #F0F5F2;
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.03);
+  }
+  
+  /* 語言切換 */
+  .toggle-label {
+    background-color: var(--primary-color);
+    transition: all 0.3s ease;
+  }
+  
+  /* 訂單狀態 */
+  .order-status.pending { background-color: #FFF8E1; color: #E9B44C; }
+  .order-status.preparing { background-color: #E3F2FD; color: #5D7D89; }
+  .order-status.ready { background-color: #E8F5E9; color: var(--success-color); }
+  .order-status.completed { background-color: #F5F5F5; color: #9E9E9E; }
+  
+  /* 訂單編號 */
+  .order-number {
+    color: var(--accent-color);
+    font-weight: 600;
+    font-size: 1.3em;
+  }
+  
+  /* 建議按鈕 */
+  .suggestion-btn {
+    background-color: white;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+    transition: all 0.3s ease;
+  }
+  
+  .suggestion-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
