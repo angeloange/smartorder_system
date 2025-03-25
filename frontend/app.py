@@ -421,6 +421,8 @@ def confirm_order():
         # 為每一個展開的訂單分配序號
         for i, order in enumerate(expanded_orders):
             try:
+                weather, temperature = classify_weather(weather=get_weather_data()[2], weather_dict=weather_dict), get_weather_data()[3]
+
                 # 生成最終訂單號碼：基礎號碼 + "-" + 序號
                 item_order_number = f"{base_order_number}-{i+1}"
                 query = """
@@ -437,7 +439,7 @@ def confirm_order():
                     order.get('ice', '正常冰'), 
                     order.get('sugar', '全糖'), 
                     order_date, order_time, 
-                    'sunny', 25.0,  # 默認天氣
+                    weather, temperature,
                     'pending', item_order_number
                 )
                 
