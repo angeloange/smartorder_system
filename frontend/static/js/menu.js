@@ -181,8 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 初始化 WebSocket 連接
-    const socket = io('http://localhost:5003');  // 後台服務器地址
-    
+    const socket = io(window.location.hostname + ':5003');    
     socket.on('connect', () => {
         console.log('Connected to WebSocket server');
         // 連接後獲取初始等候時間
