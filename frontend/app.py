@@ -418,11 +418,29 @@ def confirm_order():
         success_count = 0
         created_order_numbers = []
         
+        # 安全獲取天氣數據
+        try:
+            weather_data = get_weather_data()
+            
+            # 檢查返回值結構
+            if isinstance(weather_data, tuple) and len(weather_data) >= 4:
+                # 正常格式：函數返回4個值
+                weather = classify_weather(weather=weather_data[2], weather_dict=weather_dict)
+                temperature = weather_data[3]
+            else:
+                # API 返回格式已變更：使用預設值
+                print(f"天氣 API 返回異常格式: {weather_data}")
+                weather = "sunny"  # 預設天氣
+                temperature = 25  # 預設溫度
+        except Exception as e:
+            print(f"獲取天氣數據時出錯: {str(e)}")
+            # 發生錯誤時使用預設值
+            weather = "sunny"
+            temperature = 25
+        
         # 為每一個展開的訂單分配序號
         for i, order in enumerate(expanded_orders):
             try:
-                weather, temperature = classify_weather(weather=get_weather_data()[2], weather_dict=weather_dict), get_weather_data()[3]
-
                 # 生成最終訂單號碼：基礎號碼 + "-" + 序號
                 item_order_number = f"{base_order_number}-{i+1}"
                 query = """
@@ -515,6 +533,5 @@ def confirm_order():
             'status': 'error',
             'message': '訂單處理失敗'
         })
-
 if __name__ == '__main__':
     app.run(debug=True)
