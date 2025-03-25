@@ -481,6 +481,203 @@
     
     // 設置全局訪問
     window.assistant = assistant;
+
+
+        // ===== 語音輸入功能 =====
+    let recognition = null;
+    let isListening = false;
+    let resultIndicator = null;
+
+    // 切換語音輸入功能
+    function toggleVoiceInput() {
+        if (isListening) {
+            stopVoiceInput();
+        } else {
+            startVoiceInput();
+        }
+    }
+
+    // 啟動語音輸入
+    function startVoiceInput() {
+        try {
+            console.log('開始語音輸入');
+            
+            // 檢查瀏覽器支持
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('您的瀏覽器不支持語音識別，請使用Chrome或Edge等現代瀏覽器');
+                return;
+            }
+            
+            // 更新按鈕樣式
+            const voiceBtn = document.getElementById('chatVoiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.add('recording');
+            }
+            
+            // 顯示錄音指示器
+            const chatMessages = document.getElementById('chatMessages');
+            const feedbackMsg = document.createElement('div');
+            feedbackMsg.id = 'recordingIndicator';
+            feedbackMsg.className = 'message system recording-indicator';
+            feedbackMsg.innerHTML = '<div class="recording-dot"></div> 正在聆聽您的聲音...';
+            
+            if (chatMessages) {
+                chatMessages.appendChild(feedbackMsg);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // 創建語音識別結果顯示區
+            resultIndicator = document.createElement('div');
+            resultIndicator.id = 'speechResult';
+            resultIndicator.className = 'message system speech-result';
+            resultIndicator.textContent = '等待您說話...';
+            
+            if (chatMessages) {
+                chatMessages.appendChild(resultIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // 初始化語音識別
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            recognition.interimResults = true;
+            recognition.continuous = true;
+            
+            // 處理結果
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                
+                // 提取識別結果
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // 顯示中間結果
+                if (interimTranscript !== '') {
+                    if (resultIndicator) {
+                        resultIndicator.textContent = interimTranscript;
+                        
+                        const chatMessages = document.getElementById('chatMessages');
+                        if (chatMessages) {
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    }
+                }
+                
+                // 處理最終結果
+                if (finalTranscript !== '') {
+                    console.log('識別到語音:', finalTranscript);
+                    
+                    // 移除中間結果顯示，讓用戶訊息顯示得更自然
+                    if (resultIndicator && resultIndicator.parentNode) {
+                        resultIndicator.parentNode.removeChild(resultIndicator);
+                        resultIndicator = null;
+                    }
+                    
+                    // 添加用戶訊息並處理
+                    assistant.addMessage('user', finalTranscript);
+                    assistant.processChat(finalTranscript);
+                    
+                    // 重新創建結果顯示區，為下一輪識別做準備
+                    const chatMessages = document.getElementById('chatMessages');
+                    if (chatMessages) {
+                        resultIndicator = document.createElement('div');
+                        resultIndicator.id = 'speechResult';
+                        resultIndicator.className = 'message system speech-result';
+                        resultIndicator.textContent = '等待您說話...';
+                        chatMessages.appendChild(resultIndicator);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+                }
+            };
+            
+            // 錯誤處理
+            recognition.onerror = function(event) {
+                console.error('語音識別錯誤:', event.error);
+                
+                if (event.error === 'not-allowed') {
+                    alert('無法訪問麥克風，請確保您已授予網站麥克風權限');
+                    stopVoiceInput();
+                }
+            };
+            
+            // 開始識別
+            recognition.start();
+            isListening = true;
+            
+        } catch (error) {
+            console.error('啟動語音識別錯誤:', error);
+            alert('啟動語音識別時出錯：' + error.message);
+            
+            // 確保重置狀態
+            stopVoiceInput();
+        }
+    }
+
+    // 停止語音輸入
+    function stopVoiceInput() {
+        console.log('停止語音輸入');
+        
+        // 移除按鈕樣式
+        const voiceBtn = document.getElementById('chatVoiceBtn');
+        if (voiceBtn) {
+            voiceBtn.classList.remove('recording');
+        }
+        
+        // 移除錄音指示器
+        const indicator = document.getElementById('recordingIndicator');
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+        }
+        
+        // 移除結果顯示
+        if (resultIndicator && resultIndicator.parentNode) {
+            resultIndicator.parentNode.removeChild(resultIndicator);
+            resultIndicator = null;
+        }
+        
+        // 停止語音識別
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch (e) {
+                console.log('停止語音識別時出錯:', e);
+            }
+            recognition = null;
+        }
+        
+        isListening = false;
+    }
+
+    // 自動解鎖音頻，兼容移動設備
+    function unlockAudio() {
+        try {
+            // 創建並播放靜音音頻
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const buffer = audioContext.createBuffer(1, 1, 22050);
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+        } catch (e) {
+            console.log('解鎖音頻失敗:', e);
+        }
+    }
+
+    // 在任何用戶交互時解鎖音頻
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+
+
+
+
     
     // 在DOM加載完成後綁定事件
     document.addEventListener('DOMContentLoaded', function() {
@@ -501,6 +698,56 @@
                 }
             });
         }
+        
+        // 綁定麥克風按鈕
+        const chatVoiceBtn = document.getElementById('chatVoiceBtn');
+        if (chatVoiceBtn) {
+            console.log('找到聊天語音按鈕，添加點擊事件');
+            
+            chatVoiceBtn.addEventListener('click', function() {
+                console.log('聊天語音按鈕被點擊');
+                toggleVoiceInput();
+            });
+        }
+
+        // 添加語音聽寫樣式
+        const voiceStyle = document.createElement('style');
+        voiceStyle.textContent = `
+            #chatVoiceBtn.recording {
+                color: #f44336;
+                animation: pulse 1s infinite;
+            }
+            
+            .recording-indicator {
+                display: flex;
+                align-items: center;
+                background-color: #f1f1f1;
+                padding: 8px 12px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                color: #555;
+                font-style: italic;
+            }
+            
+            .recording-dot {
+                width: 12px;
+                height: 12px;
+                background-color: #f44336;
+                border-radius: 50%;
+                margin-right: 8px;
+                animation: pulse 1s infinite;
+            }
+            
+            .speech-result {
+                font-style: italic;
+                color: #666;
+                background-color: #f9f9f9;
+                padding: 4px 8px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+            }
+        `;
+        document.head.appendChild(voiceStyle);
         
         // 添加語音指示器樣式
         const style = document.createElement('style');
