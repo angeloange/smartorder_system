@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from flask_login import UserMixin
 import enum
+import pytz
 
 db = SQLAlchemy()
 
@@ -11,6 +12,9 @@ class OrderStatus(enum.Enum):
     PROCESSING = 'processing'
     COMPLETED = 'completed'
     CANCELLED = 'cancelled'
+
+def get_tw_time():
+    return datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Taipei'))
 
 class Order(db.Model):
     __tablename__ = 'orders'
@@ -30,7 +34,7 @@ class Order(db.Model):
     phone_number = db.Column(db.String(10))
     status = db.Column(db.Enum(OrderStatus), nullable=False, default=OrderStatus.PENDING)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=get_tw_time, onupdate=get_tw_time)
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     order_number = db.Column(db.String(20))
 
