@@ -44,29 +44,31 @@
                 return false;
             }
             
-            if (this.speaking) {
-                console.log('已有語音正在播放，跳過');
-                return false;
-            }
-            
             try {
                 this.speaking = true;
                 console.log('播放語音:', text);
+                
+                // 使用 SSML 格式設置語音速度
+                const ssml = `
+                    <speak version="1.2" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-TW">
+                        <voice name="zh-TW-HsiaoChenNeural">
+                            <prosody rate="+30%">${text}</prosody>
+                        </voice>
+                    </speak>
+                `;
                 
                 // 通知開始說話
                 if (this.callbacks.onSpeakStart) {
                     this.callbacks.onSpeakStart();
                 }
                 
-                this.synthesizer.speakTextAsync(
-                    text,
+                // 使用 speakSsmlAsync 而不是 speakTextAsync
+                this.synthesizer.speakSsmlAsync(
+                    ssml,
                     result => {
                         this.speaking = false;
-                        if (result) {
-                            console.log('語音播放完成:', result.reason);
-                        }
+                        console.log('語音播放完成:', result.reason);
                         
-                        // 通知說話結束
                         if (this.callbacks.onSpeakEnd) {
                             this.callbacks.onSpeakEnd();
                         }
@@ -75,7 +77,6 @@
                         this.speaking = false;
                         console.error('語音播放失敗:', error);
                         
-                        // 通知說話結束
                         if (this.callbacks.onSpeakEnd) {
                             this.callbacks.onSpeakEnd();
                         }
@@ -84,9 +85,8 @@
                 return true;
             } catch (error) {
                 this.speaking = false;
-                console.error('語音播放錯誤:', error);
+                console.error('語音播放失敗:', error);
                 
-                // 通知說話結束
                 if (this.callbacks.onSpeakEnd) {
                     this.callbacks.onSpeakEnd();
                 }
