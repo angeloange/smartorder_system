@@ -433,7 +433,7 @@ def confirm_order():
                 """
                 values = (
                     order.get('drink_name', '未知飲品'), 
-                    order.get('size', '中杯'),
+                    order.get('size', '大杯'),
                     order.get('ice', '正常冰'), 
                     order.get('sugar', '全糖'), 
                     order_date, order_time, 

@@ -48,7 +48,7 @@ class OrderAnalyzer:
                 print(f"處理簡單飲料名稱: {drink}")
                 order_detail = {
                     'drink_name': drink,
-                    'size': '中杯',  # 默認中杯
+                    'size': '大杯',  # 默認中杯
                     'ice': '正常冰',  # 默認正常冰
                     'sugar': '全糖',  # 默認全糖
                     'quantity': 1     # 默認1杯
@@ -81,7 +81,7 @@ class OrderAnalyzer:
             1. 請分析出飲料名稱、大小、甜度、冰量和數量
             2. sugar只能是(全糖, 半糖, 微糖, 無糖)
             3. ice只能是(正常冰, 少冰, 微冰, 去冰, 熱飲, 溫)
-            4. size只能是(大杯, 中杯, 小杯)，預設是中杯
+            4. size只能是(大杯, 小杯)，預設是大杯
             5. quantity是數量，預設是1
             6. 直接回傳JSON格式，不要加入markdown標記
             
@@ -150,7 +150,7 @@ class OrderAnalyzer:
                     break
             
             # 尋找大小
-            size = '中杯'  # 默認中杯
+            size = '大杯'  # 默認大杯
             for option in self.sizes:
                 if option in text:
                     size = option
