@@ -44,3 +44,15 @@ class LoadPath:
         return csv_path      
         # df = pd.read_csv(csv_path)
         # return df
+
+if __name__ == "__main__":
+    aaa = LoadPath(total_model_filename = "sales_total_model_v2_2025_03_18.pkl",
+                    sales_model_filename = "lgbm_drink_weather_model_v4_2025_03_18.pkl",
+                    sales_csv_filename = "drink_orders_2025_03_18.csv")
+
+    try: 
+        print(aaa.load_total_model_path())
+        print(aaa.load_sales_model_path())
+        print(aaa.load_sales_csv_path())
+    except Exception as e:
+        print(e)
