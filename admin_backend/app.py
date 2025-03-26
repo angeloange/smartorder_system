@@ -9,11 +9,11 @@ from werkzeug.utils import secure_filename
 import plotly.express as px
 import json
 from codes.db import dbconfig, DB
+from tools.load_path import LoadPath
 from predict.models import Pred_total, Pred_sales
 from predict.total_pred.predict_total_sales import Pred_Total_Sales
 from predict.sales_pred.predict_sales_v4_2 import Pred_Sales
 from weather_API.weather_API import weather_dict, classify_weather, get_weather_data, get_tomorrow_weather
-
 
 
 
@@ -375,7 +375,16 @@ def predict_sales():
     test_date = latest_weather['date']
     test_weather = latest_weather['weather']
     test_temperature = latest_weather['temperature']
-    total_model_filename = "predict/total_pred/sales_total_model_v2_2025_03_18.pkl"
+
+    total_model_filename = "sales_total_model_v2_2025_03_18.pkl"
+    sales_model_filename = "lgbm_drink_weather_model_v4_2025_03_18.pkl"
+    sales_csv_filename = "drink_orders_2025_03_18.csv"
+    load_path = LoadPath(total_model_filename=total_model_filename,
+                         sales_model_filename=sales_model_filename,
+                         sales_csv_filename=sales_csv_filename
+                         )
+    # total_model_filename = "predict/total_pred/sales_total_model_v2_2025_03_18.pkl"
+    total_model_filename = load_path.load_total_model_path()
     # print(f"Model file path: {total_model_filename}")
     # print(f"1.{test_date} 2.{test_weather} 3.{test_temperature}")
 
@@ -383,8 +392,10 @@ def predict_sales():
         # print(f"Error: Model file not found at {total_model_filename}")
         return jsonify({"error": "Total sales model file not found"}), 500
 
-    sales_model_filename = 'predict/sales_pred/lgbm_drink_weather_model_v4_2025_03_18.pkl'
-    csv_filename = 'predict/new_data/drink_orders_2025_03_18.csv'
+    # sales_model_filename = 'predict/sales_pred/lgbm_drink_weather_model_v4_2025_03_18.pkl'
+    sales_model_filename = load_path.load_sales_model_path()
+    # csv_filename = 'predict/new_data/drink_orders_2025_03_18.csv'
+    csv_filename = load_path.load_sales_csv_path()
     # print("Creating Pred_total instance...")
 
     try:
