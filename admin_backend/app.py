@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 import plotly.express as px
 import json
 from codes.db import dbconfig, DB
+from tools.load_path import LoadPath
 from predict.models import Pred_total, Pred_sales
 from predict.total_pred.predict_total_sales import Pred_Total_Sales
 from predict.sales_pred.predict_sales_v4_2 import Pred_Sales
@@ -375,24 +376,35 @@ def predict_sales():
     test_date = latest_weather['date']
     test_weather = latest_weather['weather']
     test_temperature = latest_weather['temperature']
-    total_model_filename = "predict/total_pred/sales_total_model_v2_2025_03_18.pkl"
-    
-    if not os.path.exists(total_model_filename):
-        print(f"錯誤: 未找到模型文件 {total_model_filename}")
-        return fallback_recommendation()
 
-    sales_model_filename = 'predict/sales_pred/lgbm_drink_weather_model_v4_2025_03_18.pkl'
-    csv_filename = 'predict/new_data/processed_data.csv'
+    total_model_filename = "sales_total_model_v2_2025_03_18.pkl"
+    sales_model_filename = "lgbm_drink_weather_model_v4_2025_03_18.pkl"
+    sales_csv_filename = "drink_orders_2025_03_18.csv"
+    load_path = LoadPath(total_model_filename=total_model_filename,
+                         sales_model_filename=sales_model_filename,
+                         sales_csv_filename=sales_csv_filename
+                         )
+    total_model_filename = load_path.load_total_model_path()
+    sales_model_filename = load_path.load_sales_model_path()
+    sales_csv_filename = load_path.load_sales_csv_path()
+
+    missing_files = [
+         filename for filename in [total_model_filename, sales_model_filename, sales_csv_filename]
+             if not os.path.exists(filename)
+             ]
+    if missing_files:
+        print(f"錯誤: 未找到以下檔案 {', '.join(missing_files)}")
+        return fallback_recommendation()
     
     # 錯誤處理包裝 - 使用備用推薦
     try:
         # 第一步: 總銷量預測
         pred_total_info = Pred_total(
-            date_string=test_date,
-            weather=test_weather,
-            temperature=test_temperature,
-            model_filename=total_model_filename
-        )
+             date_string=test_date,
+             weather=test_weather,
+             temperature=test_temperature,
+             model_filename=total_model_filename
+             )
         
         predtotal = Pred_Total_Sales(pred_total_info)
         daily_total_sales = predtotal.pred()
@@ -400,13 +412,13 @@ def predict_sales():
         
         # 第二步: 飲品銷量預測
         pred_sales_info = Pred_sales(
-            date_string=test_date,
-            weather=test_weather,
-            temperature=test_temperature,
-            daily_total_sales=daily_total_sales,
-            model_filename=sales_model_filename,
-            csv_filename=csv_filename
-        )
+             date_string=test_date,
+             weather=test_weather,
+             temperature=test_temperature,
+             daily_total_sales=daily_total_sales,
+             model_filename=sales_model_filename,
+             csv_filename=sales_csv_filename
+             )
 
         predsales = Pred_Sales(pred_sales_info)
         weather_recommend = predsales.get_top_6_sales_by_condition()
@@ -442,6 +454,7 @@ def fallback_recommendation():
         "daily_total_sales": estimated_sales,
         "top_6_drinks": top_drinks
     })
+
 @app.route('/api/sales_chart')
 def sales_chart():
     days = request.args.get("days", default=7, type=int)  # 取得輸入的天數
