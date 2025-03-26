@@ -254,40 +254,8 @@ def monthly_top_drinks():
 
 @app.route('/api/weather_recommend', methods=['GET'])
 def weather_recommend():
-    try:
-        station, location, weather, temperature = get_weather_data()
-        date = str(datetime.now().date())
-
-        test_date = date
-        test_weather = classify_weather(weather=weather, weather_dict=weather_dict)
-        test_temperature = int(temperature)
-        
-        # 使用簡單推薦邏輯
-        weather_lower = test_weather.lower()
-        drinks = []
-        
-        # 根據溫度選擇飲品
-        if test_temperature > 28:  # 炎熱
-            drinks = ["珍珠奶茶", "檸檬綠茶", "百香果綠茶", "蜂蜜檸檬", "芒果冰沙", "冬瓜茶"]
-        elif test_temperature > 22:  # 溫暖
-            drinks = ["波霸奶茶", "椰果奶茶", "蜂蜜奶茶", "烏龍拿鐵", "冬瓜檸檬", "青茶"]
-        elif test_temperature > 15:  # 涼爽
-            drinks = ["焦糖奶茶", "巧克力牛奶", "可可", "拿鐵咖啡", "牛奶咖啡", "摩卡咖啡"]
-        else:  # 寒冷
-            drinks = ["熱拿鐵", "熱奶茶", "黑糖珍珠鮮奶", "熱可可", "熱烏龍茶", "熱紅茶"]
-        
-        # 根據天氣進一步調整
-        if weather_lower == "rainy" or weather_lower == "stormy":
-            # 下雨天適合的飲品
-            if test_temperature <= 20:
-                drinks = ["熱拿鐵", "熱奶茶", "黑糖珍珠鮮奶", "熱可可", "熱烏龍茶", "熱紅茶"]
-        
-        return jsonify(drinks)
-    except Exception as e:
-        print(f"天氣推薦功能錯誤: {str(e)}")
-        # 返回預設推薦
-        return jsonify(["珍珠奶茶", "波霸奶茶", "烏龍拿鐵", "檸檬綠茶", "焦糖奶茶", "蜂蜜奶茶"])
-
+    station, location, weather, temperature = get_weather_data()
+    date = str(datetime.now().date())
 
     test_date = date
     test_weather = classify_weather(weather=weather, weather_dict=weather_dict)
