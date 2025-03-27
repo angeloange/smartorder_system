@@ -382,7 +382,7 @@ def predict_sales():
         return fallback_recommendation()
 
     sales_model_filename = 'predict/sales_pred/lgbm_drink_weather_model_v4_2025_03_18.pkl'
-    csv_filename = 'predict/new_data/processed_data.csv'
+    csv_filename = 'predict/new_data/drink_orders_2025_03_18.csv'
     
     # 錯誤處理包裝 - 使用備用推薦
     try:

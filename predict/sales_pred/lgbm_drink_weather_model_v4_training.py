@@ -7,7 +7,7 @@ import joblib
 today_date = str(datetime.now().date()).replace('-', '_')
 
 # 讀取 CSV 檔案
-csv_file = f"predict/new_data/drink_orders_{today_date}.csv"
+csv_file = "predict/new_data/drink_orders_2025_03_18.csv"
 df = pd.read_csv(csv_file)
 
 # 確保所有欄位名稱沒有空格
@@ -86,6 +86,6 @@ unique_drinks.to_csv("drink_sales_predictions_4.csv", index=False)
 print("預測結果已存入 drink_sales_predictions.csv")
 
 # 訓練完成後存儲模型
-model_filename = f"predict/sales_pred/lgbm_drink_weather_model_v4_{today_date}.pkl"
+model_filename = "lgbm_drink_weather_model_v4_2025_03_18.pkl"
 joblib.dump(model, model_filename)
 print(f"模型已存入 {model_filename}")

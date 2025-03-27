@@ -8,7 +8,7 @@ from sklearn.metrics import mean_absolute_error
 today_date = str(datetime.now().date()).replace('-', '_')
 
 # 讀取 CSV 檔案
-df = pd.read_csv(f"predict/new_data/drink_orders_{today_date}.csv")
+df = pd.read_csv("predict/new_data/drink_orders_2025_03_18.csv")
 
 # **建立 weather_status 類別對應表**
 df["weather_status"] = df["weather_status"].astype("category")
@@ -63,6 +63,6 @@ predicted_sales = model.predict(sample_data)
 print(f"預測銷量（晴天 + 28°C + 7 月 + 星期三 + 一年內第 200 天）：{predicted_sales[0]:.0f} 杯")
 
 # 訓練完成後存儲模型
-model_filename = f"predict/sales_pred/sales_total_model_v2_{today_date}.pkl"
+model_filename = "sales_total_model_v2_2025_03_18.pkl"
 joblib.dump(model, model_filename)
 print(f"模型已存入 {model_filename}")
