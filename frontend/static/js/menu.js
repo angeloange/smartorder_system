@@ -311,6 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 調用更新熱銷排行
     console.log('從 menu.js 主要初始化中調用 updateTopDrinks');
     updateTopDrinks();
+
+    // 在菜單卡片上添加點擊事件
+    initializeMenuCards();
 });
 
 async function updateTopDrinks() {
@@ -527,3 +530,78 @@ function updateTranslations(lang) {
         voiceStatus.textContent = translations[lang].voicePrompt;
     }
 }
+// 修改 initializeMenuCards() 函數的選擇器
+function initializeMenuCards() {
+    console.log('初始化菜單點擊事件');
+    
+    // 修改選擇器，使用更精確的定位
+    const menuItems = document.querySelectorAll('.menu-grid .item');
+    console.log(`找到 ${menuItems.length} 個菜單項目`);
+    
+    menuItems.forEach(item => {
+        item.style.cursor = 'pointer';
+        
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // 從元素中獲取飲料名稱
+            const nameElement = this.querySelector('.name');
+            if (!nameElement) {
+                console.log('找不到飲料名稱元素');
+                return;
+            }
+            
+            const drinkName = nameElement.textContent.trim();
+            console.log(`點擊了飲料: ${drinkName}`);  // 偵錯用
+            
+            // 尋找文字輸入框
+            const chatInput = document.getElementById('chatInput');
+            if (!chatInput) {
+                console.log('找不到輸入框元素');
+                return;
+            }
+            
+            // 智能更新輸入框文字
+            const currentText = chatInput.value.trim();
+            if (currentText) {
+                chatInput.value = `${currentText}，再來一杯${drinkName}`;
+            } else {
+                chatInput.value = `我要一杯${drinkName}`;
+            }
+            
+            // 聚焦輸入框
+            chatInput.focus();
+            
+            // 增加點擊視覺反饋
+            this.classList.add('selected');
+            setTimeout(() => {
+                this.classList.remove('selected');
+            }, 200);
+        });
+    });
+}
+
+// 確保在 DOM 完全載入後才初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // ...existing code...
+    
+    // 初始化菜單點擊
+    initializeMenuCards();
+    
+    // 監聽動態載入的內容
+    const menuContainer = document.querySelector('.menu-container');
+    if (menuContainer) {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    initializeMenuCards();
+                }
+            });
+        });
+        
+        observer.observe(menuContainer, {
+            childList: true,
+            subtree: true
+        });
+    }
+});
