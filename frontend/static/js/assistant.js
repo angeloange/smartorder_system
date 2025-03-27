@@ -280,8 +280,6 @@
             if (!text) return;
             
             chatInput.value = '';
-            
-            // 添加用戶訊息
             this.addMessage('user', text);
             
             // 檢查是否有待確認的訂單
@@ -290,78 +288,21 @@
                 window.orderCore.getOrderState().hasActiveOrder && 
                 window.orderCore.getOrderState().state === 'confirming') {
                 
-                // 擴展確認關鍵詞列表，增加更多常用表達
-                const confirmKeywords = ['確認', '好', '好的', '行', '是', '沒問題', '可以', 
-                                       '對', '要', '正確', '確定', '訂購', '下單', '可', '嗯'];
-                const cancelKeywords = ['取消', '不要', '不', '算了', '錯', '否', '不對'];
+                // 檢查是否為取消訂單
+                const cancelKeywords = ['取消', '不要', '不', '算了'];
+                const isCancel = cancelKeywords.some(keyword => text.includes(keyword));
                 
-                // 更智能的確認判斷
-                const hasConfirmKeyword = confirmKeywords.some(keyword => text.includes(keyword));
-                const hasCancelKeyword = cancelKeywords.some(keyword => text.includes(keyword));
-                
-                console.log('檢測到訂單確認對話，判斷結果：', { hasConfirmKeyword, hasCancelKeyword });
-                
-                if (hasConfirmKeyword && !hasCancelKeyword) {
-                    // 直接確認訂單，不發送文字到後端分析
-                    console.log('用戶確認訂單，直接處理確認流程');
+                if (isCancel) {
+                    // 調用 orderCore 的取消方法
+                    const message = window.orderCore.cancelOrder();
+                    this.addMessage('assistant', message);
                     
-                    // 禁用輸入框，防止重複操作
-                    chatInput.disabled = true;
-                    
-                    if (window.orderCore && typeof window.orderCore.confirmOrder === 'function') {
-                        window.orderCore.confirmOrder()
-                            .then(result => {
-                                console.log('訂單確認結果:', result);
-                                // 重新啟用輸入框
-                                chatInput.disabled = false;
-                                
-                                if (result.success) {
-                                    // 格式化訂單號碼顯示
-                                    let orderNumber = result.orderNumber || '';
-                                    if (typeof orderNumber === 'string' && orderNumber.startsWith('[')) {
-                                        try {
-                                            orderNumber = JSON.parse(orderNumber)[0] || orderNumber;
-                                        } catch (e) {
-                                            orderNumber = orderNumber.replace(/[\[\]']/g, '');
-                                        }
-                                    }
-                                    
-                                    const orderMessage = `訂單已確認！您的取餐號碼是 ${orderNumber}，謝謝您的光臨。`;
-                                    
-                                    // 添加到聊天界面
-                                    this.addMessage('assistant', orderMessage);
-                                    
-                                    // 使用SweetAlert顯示取餐號碼
-                                    if (typeof Swal !== 'undefined') {
-                                        Swal.fire({
-                                            title: '訂單已確認',
-                                            html: `
-                                                <p>好的，尊貴的客人請稍候</p>
-                                                <p>正在為您製作飲品</p>
-                                                <p>您的取餐號碼是 <strong style="font-size:24px;color:#FF5722">${orderNumber}</strong></p>
-                                            `,
-                                            icon: 'success',
-                                            timer: 5000,
-                                            timerProgressBar: true,
-                                            showConfirmButton: false
-                                        });
-                                    }
-                                } else {
-                                    this.addMessage('assistant', result.message || '訂單確認失敗，請稍後再試。');
-                                }
-                            })
-                            .catch(err => {
-                                console.error('確認訂單出錯:', err);
-                                chatInput.disabled = false;
-                                this.addMessage('assistant', '處理訂單時出現錯誤，請稍後再試。');
-                            });
-                        
-                        // 重要：不再處理後續文字輸入
-                        return;
+                    // 隱藏訂單確認界面
+                    const orderResult = document.getElementById('orderResult');
+                    if (orderResult) {
+                        orderResult.classList.add('hidden');
                     }
-                } else if (hasCancelKeyword) {
-                    // 取消訂單處理...
-                    // 現有代碼維持不變
+                    return;
                 }
             }
             

@@ -211,14 +211,23 @@ class OrderCore {
      * @return {string} 取消訊息
      */
     cancelOrder() {
+        // 重設所有訂單相關狀態
         this.currentOrder = null;
         this.orderConfirmed = false;
         this.state = 'idle';
         
+        // 清除相關 UI
+        const orderResult = document.getElementById('orderResult');
+        if (orderResult) {
+            orderResult.classList.add('hidden');
+        }
+        
+        // 通知回調
         if (this.callbacks.onOrderCancel) {
             this.callbacks.onOrderCancel();
         }
         
+        // 返回取消訊息
         return '訂單已取消，請問還需要其他飲料嗎？';
     }
     
