@@ -6,7 +6,7 @@
 <img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-API-purple">
 
 一個結合自然語言處理的飲料店點餐系統，包含前台點餐介面和後台管理系統。透過AI技術提供智能化點餐體驗，並為店家提供高效管理工具。
-
+## 簡報連結: https://pse.is/智慧點餐系統
 ## ✨ 核心功能
 
 ### 🤖 AI 智能點餐
